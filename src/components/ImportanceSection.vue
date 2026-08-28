@@ -1,5 +1,7 @@
 <template>
-  <header>
-    <h2>Importance Section</h2>
-  </header>
+  <section>
+    <h2>Importance</h2>
+
+    <p>Learn the importance of urban greening and tree planting</p>
+  </section>
 </template>

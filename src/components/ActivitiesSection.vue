@@ -1,5 +1,7 @@
 <template>
-  <header>
-    <h2>Activities Section</h2>
-  </header>
+  <section>
+    <h2>Activities</h2>
+
+    <p>Explore community activities</p>
+  </section>
 </template>
