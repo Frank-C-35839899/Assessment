@@ -28,17 +28,23 @@ import VolunteerSection from '../components/VolunteerSection.vue'
 
 <style scoped>
 .hero-section {
-  min-height: 420px;
+  min-height: 460px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   padding: 60px 30px;
-  background-color: #eef5ee;
+
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('../assets/FIT5032 A1.jpg');
+
+  background-size: cover;
+  background-position: center;
 }
 
 .hero-content {
   max-width: 800px;
+  color: white;
 }
 
 .hero-content h1 {
