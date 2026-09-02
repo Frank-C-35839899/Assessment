@@ -3,41 +3,53 @@
     <h2>Importance of Urban Greening</h2>
 
     <div class="cards">
-      <div class="card">
-        <h3>Hydrology and Soil</h3>
-        <p>
-          Urban greening helps improve soil quality, reduce surface runoff, and support better water
-          management in urban environments.
-        </p>
-      </div>
+      <router-link to="/importance/hydrology-soil" class="importance-card">
+        Hydrology and Soil
+      </router-link>
 
-      <div class="card">
-        <h3>Physical and Mental Health</h3>
-        <p>
-          Green spaces can support healthier lifestyles, reduce stress, and improve the overall
-          wellbeing of local communities.
-        </p>
-      </div>
+      <router-link to="/importance/health" class="importance-card">
+        Physical and Mental Health
+      </router-link>
     </div>
   </section>
 </template>
 
 <style scoped>
 .importance-section {
-  padding: 40px;
+  padding: 50px 40px;
 }
 
 .cards {
   display: flex;
-  gap: 20px;
+  gap: 24px;
   flex-wrap: wrap;
 }
 
-.card {
+.importance-card {
   flex: 1;
-  min-width: 250px;
-  padding: 20px;
+  min-width: 280px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 160px;
+  padding: 30px;
+
   border: 1px solid #ddd;
   border-radius: 10px;
+
+  text-decoration: none;
+  color: #222;
+
+  font-size: 22px;
+  font-weight: bold;
+
+  transition: 0.2s;
+}
+
+.importance-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
 }
 </style>

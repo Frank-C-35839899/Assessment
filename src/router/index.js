@@ -5,6 +5,8 @@ import UrbanGreeningView from '../views/UrbanGreeningView.vue'
 import TreePlantingView from '../views/TreePlantingView.vue'
 import BiodiversityView from '../views/BiodiversityView.vue'
 import AboutView from '../views/AboutView.vue'
+import HydrologySoilView from '../views/HydrologySoilView.vue'
+import HealthView from '../views/HealthView.vue'
 
 const routes = [
   {
@@ -31,6 +33,16 @@ const routes = [
     path: '/about',
     name: 'About',
     component: AboutView,
+  },
+  {
+    path: '/importance/hydrology-soil',
+    name: 'HydrologySoil',
+    component: HydrologySoilView,
+  },
+  {
+    path: '/importance/health',
+    name: 'Health',
+    component: HealthView,
   },
 ]
 
