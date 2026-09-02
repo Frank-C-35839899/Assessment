@@ -1,19 +1,36 @@
+<script setup>
+import { ref } from 'vue'
+
+const menuOpen = ref(false)
+
+const toggleMenu = () => {
+  menuOpen.value = !menuOpen.value
+}
+</script>
+
 <template>
   <header class="site-header">
-    <div class="logo">Urban Canopy</div>
+    <div class="logo">Green Melbourne</div>
 
-    <nav class="nav-links">
-      <router-link to="/">Home</router-link>
-      <router-link to="/urban-greening">Urban Greening</router-link>
-      <router-link to="/tree-planting">Tree Planting</router-link>
-      <router-link to="/biodiversity">Biodiversity</router-link>
-      <router-link to="/about">About Us</router-link>
+    <button class="menu-button" @click="toggleMenu">☰</button>
+
+    <nav v-if="menuOpen" class="menu">
+      <router-link to="/" @click="menuOpen = false"> Home </router-link>
+
+      <router-link to="/urban-greening" @click="menuOpen = false"> Urban Greening </router-link>
+
+      <router-link to="/tree-planting" @click="menuOpen = false"> Tree Planting </router-link>
+
+      <router-link to="/biodiversity" @click="menuOpen = false"> Biodiversity </router-link>
+
+      <router-link to="/about" @click="menuOpen = false"> About Us </router-link>
     </nav>
   </header>
 </template>
 
 <style scoped>
 .site-header {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -26,18 +43,38 @@
   font-weight: bold;
 }
 
-.nav-links {
-  display: flex;
-  gap: 28px;
+.menu-button {
+  font-size: 30px;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
-.nav-links a {
+.menu {
+  position: absolute;
+  top: 75px;
+  right: 40px;
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+  padding: 15px;
+  background: white;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.menu a {
+  padding: 12px;
   text-decoration: none;
   color: #222;
-  font-size: 18px;
 }
 
-.nav-links a.router-link-active {
+.menu a:hover {
+  background: #f2f2f2;
+}
+
+.menu a.router-link-active {
   font-weight: bold;
 }
 </style>
