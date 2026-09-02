@@ -5,7 +5,7 @@ import VolunteerSection from '../components/VolunteerSection.vue'
 </script>
 
 <template>
-  <div>
+  <div class="home-page">
     <h1>Home</h1>
 
     <ImportanceSection />
@@ -13,3 +13,9 @@ import VolunteerSection from '../components/VolunteerSection.vue'
     <VolunteerSection />
   </div>
 </template>
+
+<style scoped>
+.home-page {
+  padding-top: 20px;
+}
+</style>
