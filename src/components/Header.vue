@@ -1,29 +1,49 @@
 <script setup>
 import { ref } from 'vue'
+import logo from '../assets/header-logo.png'
 
 const menuOpen = ref(false)
 
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value
 }
+
+const closeMenu = () => {
+  menuOpen.value = false
+}
 </script>
 
 <template>
   <header class="site-header">
-    <div class="logo">Green Melbourne</div>
+    <!-- Logo / Brand -->
+    <router-link to="/" class="brand" @click="closeMenu">
+      <img :src="logo" alt="Green Melbourne logo" class="brand-logo" />
 
-    <button class="menu-button" @click="toggleMenu">☰</button>
+      <div class="brand-text">
+        <div class="brand-name">Green Melbourne</div>
 
+        <div class="brand-tagline">GREENER · HEALTHIER · TOGETHER</div>
+      </div>
+    </router-link>
+
+    <!-- Hamburger Button -->
+    <button class="menu-button" @click="toggleMenu" aria-label="Open navigation menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <!-- Dropdown Menu -->
     <nav v-if="menuOpen" class="menu">
-      <router-link to="/" @click="menuOpen = false"> Home </router-link>
+      <router-link to="/" @click="closeMenu"> Home </router-link>
 
-      <router-link to="/urban-greening" @click="menuOpen = false"> Urban Greening </router-link>
+      <router-link to="/urban-greening" @click="closeMenu"> Urban Greening </router-link>
 
-      <router-link to="/tree-planting" @click="menuOpen = false"> Tree Planting </router-link>
+      <router-link to="/tree-planting" @click="closeMenu"> Tree Planting </router-link>
 
-      <router-link to="/biodiversity" @click="menuOpen = false"> Biodiversity </router-link>
+      <router-link to="/biodiversity" @click="closeMenu"> Biodiversity </router-link>
 
-      <router-link to="/about" @click="menuOpen = false"> About Us </router-link>
+      <router-link to="/about" @click="closeMenu"> About Us </router-link>
     </nav>
   </header>
 </template>
@@ -31,50 +51,168 @@ const toggleMenu = () => {
 <style scoped>
 .site-header {
   position: relative;
+
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 20px 40px;
-  border-bottom: 1px solid #ddd;
+  justify-content: space-between;
+
+  padding: 16px 45px;
+
+  background: rgba(255, 255, 255, 0.96);
+
+  border-bottom: 1px solid #e7ece5;
+
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+
+  z-index: 1000;
 }
 
-.logo {
-  font-size: 28px;
-  font-weight: bold;
+.brand {
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  text-decoration: none;
+}
+
+.brand-logo {
+  width: 70px;
+  height: 70px;
+
+  object-fit: contain;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-size: 30px;
+  font-weight: 700;
+
+  color: #1f6337;
+
+  letter-spacing: 0.3px;
+}
+
+.brand-tagline {
+  margin-top: 3px;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  color: #64816c;
+
+  letter-spacing: 2px;
 }
 
 .menu-button {
-  font-size: 30px;
-  background: none;
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  flex-direction: column;
+
+  justify-content: center;
+  align-items: center;
+
+  gap: 6px;
+
+  background: #eef5ee;
+
   border: none;
+  border-radius: 50%;
+
   cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.menu-button span {
+  width: 23px;
+  height: 2px;
+
+  background: #265d36;
+
+  border-radius: 2px;
+}
+
+.menu-button:hover {
+  background: #dfeedd;
 }
 
 .menu {
   position: absolute;
-  top: 75px;
-  right: 40px;
+
+  top: 90px;
+  right: 45px;
+
+  width: 230px;
+
   display: flex;
   flex-direction: column;
-  width: 220px;
-  padding: 15px;
+
+  padding: 12px;
+
   background: white;
-  border: 1px solid #ddd;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
+
+  border: 1px solid #e2e8df;
+  border-radius: 14px;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
 .menu a {
-  padding: 12px;
+  padding: 13px 16px;
+
+  color: #333;
+
   text-decoration: none;
-  color: #222;
+
+  border-radius: 8px;
+
+  font-size: 16px;
+
+  transition: 0.2s;
 }
 
 .menu a:hover {
-  background: #f2f2f2;
+  background: #eef5ee;
+
+  color: #2f6b3b;
 }
 
 .menu a.router-link-active {
-  font-weight: bold;
+  background: #e2f1df;
+
+  color: #2f6b3b;
+
+  font-weight: 600;
+}
+
+@media (max-width: 650px) {
+  .site-header {
+    padding: 12px 20px;
+  }
+
+  .brand-logo {
+    width: 55px;
+    height: 55px;
+  }
+
+  .brand-name {
+    font-size: 22px;
+  }
+
+  .brand-tagline {
+    display: none;
+  }
+
+  .menu {
+    right: 20px;
+    top: 78px;
+  }
 }
 </style>

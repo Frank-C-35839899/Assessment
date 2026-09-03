@@ -1,6 +1,17 @@
 <template>
   <section class="activities-section" id="activities">
-    <h2>Activities</h2>
+    <div class="section-header">
+      <p class="section-tag">GET INVOLVED</p>
+
+      <h2>Activities</h2>
+
+      <div class="section-line"></div>
+
+      <p class="section-description">
+        Explore upcoming opportunities to connect with nature, support local communities, and take
+        part in environmental action.
+      </p>
+    </div>
 
     <div class="activity-list">
       <div class="activity-card">
@@ -56,7 +67,52 @@
 
 <style scoped>
 .activities-section {
-  padding: 60px 40px;
+  padding: 75px 40px;
+  background: #eef5ee;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 46px;
+}
+
+.section-tag {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #668f61;
+  text-transform: uppercase;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 52px;
+  font-weight: 700;
+  color: #2f6b3b;
+  letter-spacing: -0.5px;
+}
+
+.section-line {
+  width: 90px;
+  height: 5px;
+  margin: 16px auto 22px;
+  background: #83b574;
+  border-radius: 999px;
+}
+
+.section-description {
+  max-width: 820px;
+  margin: 0 auto;
+  color: #455448;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.8;
+}
+
+.activities-section {
+  padding: 70px 40px;
+  background: #eef5ee;
 }
 
 .activities-section h2 {
@@ -90,6 +146,17 @@
 .activity-card p {
   line-height: 1.6;
   color: #444;
+}
+
+.activity-card {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.activity-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
 }
 
 .activity-info {

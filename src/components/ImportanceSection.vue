@@ -1,6 +1,17 @@
 <template>
   <section class="importance-section">
-    <h2>Importance of Urban Greening</h2>
+    <div class="section-header">
+      <p class="section-tag">WHY IT MATTERS</p>
+
+      <h2>Importance of Urban Greening</h2>
+
+      <div class="section-line"></div>
+
+      <p class="section-description">
+        Discover how urban greening supports healthier environments, stronger communities, and a
+        more sustainable Melbourne.
+      </p>
+    </div>
 
     <div class="cards">
       <router-link to="/importance/hydrology-soil" class="importance-card hydrology-card">
@@ -16,7 +27,52 @@
 
 <style scoped>
 .importance-section {
-  padding: 50px 40px;
+  padding: 75px 40px;
+  background: #f7faf5;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 46px;
+}
+
+.section-tag {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #6f9565;
+  text-transform: uppercase;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 52px;
+  font-weight: 700;
+  color: #2f6b3b;
+  letter-spacing: -0.5px;
+}
+
+.section-line {
+  width: 90px;
+  height: 5px;
+  margin: 16px auto 22px;
+  background: #8fbe7f;
+  border-radius: 999px;
+}
+
+.section-description {
+  max-width: 820px;
+  margin: 0 auto;
+  color: #4a594c;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.8;
+}
+
+.importance-section {
+  padding: 70px 40px;
+  background: #f7faf5;
 }
 
 .cards {
