@@ -7,6 +7,10 @@ import BiodiversityView from '../views/BiodiversityView.vue'
 import AboutView from '../views/AboutView.vue'
 import HydrologySoilView from '../views/HydrologySoilView.vue'
 import HealthView from '../views/HealthView.vue'
+import TreePlantingActivityView from '../views/TreePlantingActivityView.vue'
+import GardenDayView from '../views/GardenDayView.vue'
+import BiodiversityWalkView from '../views/BiodiversityWalkView.vue'
+import VolunteerRegistrationView from '../views/VolunteerRegistrationView.vue'
 
 const routes = [
   {
@@ -43,6 +47,26 @@ const routes = [
     path: '/importance/health',
     name: 'Health',
     component: HealthView,
+  },
+  {
+    path: '/activities/tree-planting',
+    name: 'TreePlantingActivity',
+    component: TreePlantingActivityView,
+  },
+  {
+    path: '/activities/garden-day',
+    name: 'GardenDay',
+    component: GardenDayView,
+  },
+  {
+    path: '/activities/biodiversity-walk',
+    name: 'BiodiversityWalk',
+    component: BiodiversityWalkView,
+  },
+  {
+    path: '/volunteer-registration',
+    name: 'VolunteerRegistration',
+    component: VolunteerRegistrationView,
   },
 ]
 
