@@ -194,25 +194,55 @@ const closeMenu = () => {
 
 @media (max-width: 650px) {
   .site-header {
-    padding: 12px 20px;
+    width: 100%;
+    max-width: 100%;
+
+    padding: 10px 14px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    overflow: visible;
+  }
+
+  .brand {
+    min-width: 0;
+    flex: 1;
+
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
   }
 
   .brand-logo {
-    width: 55px;
-    height: 55px;
+    width: 42px;
+    height: 42px;
+
+    flex-shrink: 0;
   }
 
   .brand-name {
-    font-size: 22px;
+    font-size: 19px;
+    white-space: nowrap;
   }
 
   .brand-tagline {
     display: none;
   }
 
+  .menu-button {
+    width: 40px;
+    height: 40px;
+
+    flex-shrink: 0;
+  }
+
   .menu {
-    right: 20px;
-    top: 78px;
+    top: 66px;
+    right: 14px;
+    width: 200px;
   }
 }
 </style>

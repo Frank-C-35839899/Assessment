@@ -71,4 +71,62 @@ import VolunteerSection from '../components/VolunteerSection.vue'
 .hero-button:hover {
   opacity: 0.85;
 }
+
+@media (max-width: 768px) {
+  .hero-section {
+    width: 100%;
+    max-width: 100%;
+    min-height: 480px;
+
+    padding: 40px 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-position: center;
+    background-size: cover;
+
+    overflow: hidden;
+  }
+
+  .hero-content {
+    width: 100%;
+    max-width: 360px;
+
+    margin: 0 auto;
+    padding: 0;
+
+    text-align: center;
+  }
+
+  .hero-content h1 {
+    width: 100%;
+    margin: 0 0 20px;
+
+    font-size: 32px;
+    line-height: 1.15;
+
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+
+  .hero-content p {
+    width: 100%;
+    max-width: 330px;
+
+    margin: 0 auto 25px;
+
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .hero-button {
+    display: inline-block;
+
+    padding: 11px 20px;
+
+    font-size: 15px;
+  }
+}
 </style>
