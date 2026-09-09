@@ -11,6 +11,7 @@ import TreePlantingActivityView from '../views/TreePlantingActivityView.vue'
 import GardenDayView from '../views/GardenDayView.vue'
 import BiodiversityWalkView from '../views/BiodiversityWalkView.vue'
 import VolunteerRegistrationView from '../views/VolunteerRegistrationView.vue'
+import RegisterView from '../views/RegisterView.vue'
 
 const routes = [
   {
@@ -67,6 +68,11 @@ const routes = [
     path: '/volunteer-registration',
     name: 'VolunteerRegistration',
     component: VolunteerRegistrationView,
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: RegisterView,
   },
 ]
 

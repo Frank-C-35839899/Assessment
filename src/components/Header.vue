@@ -44,6 +44,8 @@ const closeMenu = () => {
       <router-link to="/biodiversity" @click="closeMenu"> Biodiversity </router-link>
 
       <router-link to="/about" @click="closeMenu"> About Us </router-link>
+
+      <router-link to="/register" @click="closeMenu"> Register </router-link>
     </nav>
   </header>
 </template>
