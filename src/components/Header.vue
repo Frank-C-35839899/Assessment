@@ -1,8 +1,12 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import logo from '../assets/header-logo.png'
 
+const router = useRouter()
+
 const menuOpen = ref(false)
+const currentUser = ref(null)
 
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value
@@ -11,6 +15,30 @@ const toggleMenu = () => {
 const closeMenu = () => {
   menuOpen.value = false
 }
+
+const loadCurrentUser = () => {
+  const savedUser = localStorage.getItem('currentUser')
+
+  if (savedUser) {
+    currentUser.value = JSON.parse(savedUser)
+  } else {
+    currentUser.value = null
+  }
+}
+
+const logout = () => {
+  localStorage.removeItem('currentUser')
+
+  currentUser.value = null
+
+  closeMenu()
+
+  router.push('/')
+}
+
+onMounted(() => {
+  loadCurrentUser()
+})
 </script>
 
 <template>
@@ -45,7 +73,22 @@ const closeMenu = () => {
 
       <router-link to="/about" @click="closeMenu"> About Us </router-link>
 
-      <router-link to="/register" @click="closeMenu"> Register </router-link>
+      <!-- Not logged in -->
+      <template v-if="!currentUser">
+        <router-link to="/login" @click="closeMenu"> Login </router-link>
+
+        <router-link to="/register" @click="closeMenu"> Register </router-link>
+      </template>
+
+      <!-- Logged in -->
+      <template v-else>
+        <div class="user-info">
+          Signed in as
+          <strong>{{ currentUser.name }}</strong>
+        </div>
+
+        <button class="logout-button" @click="logout">Logout</button>
+      </template>
     </nav>
   </header>
 </template>
@@ -192,6 +235,45 @@ const closeMenu = () => {
   color: #2f6b3b;
 
   font-weight: 600;
+}
+.user-info {
+  padding: 13px 16px;
+  margin-top: 5px;
+
+  font-size: 14px;
+  color: #555;
+
+  border-top: 1px solid #e5e5e5;
+}
+
+.user-info strong {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #2f6b3b;
+}
+
+.logout-button {
+  width: 100%;
+
+  padding: 13px 16px;
+
+  background: none;
+  border: none;
+  border-radius: 8px;
+
+  text-align: left;
+
+  color: #b42318;
+
+  font-size: 16px;
+
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background: #fff1f0;
 }
 
 @media (max-width: 650px) {
