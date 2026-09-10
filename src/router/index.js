@@ -14,6 +14,7 @@ import VolunteerRegistrationView from '../views/VolunteerRegistrationView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import LoginView from '../views/LoginView.vue'
 import AdminView from '../views/AdminView.vue'
+import RatingView from '../views/RatingView.vue'
 
 const routes = [
   {
@@ -88,6 +89,11 @@ const routes = [
     meta: {
       requiresAdmin: true,
     },
+  },
+  {
+    path: '/rating',
+    name: 'Rating',
+    component: RatingView,
   },
 ]
 

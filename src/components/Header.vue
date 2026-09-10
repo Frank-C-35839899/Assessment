@@ -73,6 +73,8 @@ onMounted(() => {
 
       <router-link to="/about" @click="closeMenu"> About Us </router-link>
 
+      <router-link to="/rating" @click="closeMenu"> Webpage Rating </router-link>
+
       <!-- Not logged in -->
       <template v-if="!currentUser">
         <router-link to="/login" @click="closeMenu"> Login </router-link>
