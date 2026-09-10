@@ -41,6 +41,7 @@ const loginUser = async () => {
     id: matchedUser.id,
     name: matchedUser.name,
     email: matchedUser.email,
+    role: matchedUser.role,
   }
 
   localStorage.setItem('currentUser', JSON.stringify(currentUser))

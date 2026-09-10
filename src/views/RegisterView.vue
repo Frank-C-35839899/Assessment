@@ -99,6 +99,7 @@ const registerUser = async () => {
     name: formData.value.name.trim(),
     email: formData.value.email.trim().toLowerCase(),
     password: hashedPassword,
+    role: 'user',
   }
 
   users.push(newUser)
