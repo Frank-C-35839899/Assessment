@@ -87,6 +87,10 @@ onMounted(() => {
           <strong>{{ currentUser.name }}</strong>
         </div>
 
+        <router-link v-if="currentUser.role === 'admin'" to="/admin" @click="closeMenu">
+          Admin Dashboard
+        </router-link>
+
         <button class="logout-button" @click="logout">Logout</button>
       </template>
     </nav>

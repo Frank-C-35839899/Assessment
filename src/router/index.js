@@ -13,6 +13,7 @@ import BiodiversityWalkView from '../views/BiodiversityWalkView.vue'
 import VolunteerRegistrationView from '../views/VolunteerRegistrationView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import LoginView from '../views/LoginView.vue'
+import AdminView from '../views/AdminView.vue'
 
 const routes = [
   {
@@ -80,11 +81,33 @@ const routes = [
     name: 'Login',
     component: LoginView,
   },
+  {
+    path: '/admin',
+    name: 'Admin',
+    component: AdminView,
+    meta: {
+      requiresAdmin: true,
+    },
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.beforeEach((to) => {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'))
+
+  if (to.meta.requiresAdmin) {
+    if (!currentUser) {
+      return '/login'
+    }
+
+    if (currentUser.role !== 'admin') {
+      return '/'
+    }
+  }
 })
 
 export default router
