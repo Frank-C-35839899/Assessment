@@ -23,16 +23,28 @@ const loadRatings = () => {
 
 const submitRating = () => {
   successMessage.value = ''
+  errorMessage.value = ''
 
   const currentUser = JSON.parse(localStorage.getItem('currentUser'))
 
+  // Must be logged in
   if (!currentUser) {
-    alert('Please log in before submitting a rating.')
+    errorMessage.value = 'Please log in before submitting a rating.'
     return
   }
 
-  if (selectedRating.value === 0) {
-    alert('Please select a rating before submitting.')
+  // Rating must be between 1 and 5
+  if (selectedRating.value < 1 || selectedRating.value > 5) {
+    errorMessage.value = 'Please select a rating between 1 and 5.'
+    return
+  }
+
+  // Remove unnecessary spaces
+  const cleanReview = reviewText.value.trim()
+
+  // Maximum review length
+  if (cleanReview.length > 300) {
+    errorMessage.value = 'Review must not exceed 300 characters.'
     return
   }
 
@@ -42,11 +54,12 @@ const submitRating = () => {
     id: existingIndex === -1 ? Date.now() : ratings.value[existingIndex].id,
 
     userId: currentUser.id,
-    userName: currentUser.name,
+
+    userName: String(currentUser.name).trim().slice(0, 50),
 
     score: selectedRating.value,
 
-    review: reviewText.value.trim(),
+    review: cleanReview.slice(0, 300),
 
     date: new Date().toLocaleDateString(),
   }
@@ -80,6 +93,8 @@ const averageRating = computed(() => {
 onMounted(() => {
   loadRatings()
 })
+
+const errorMessage = ref('')
 </script>
 
 <template>
@@ -151,7 +166,9 @@ onMounted(() => {
         </div>
 
         <button class="submit-button" @click="submitRating">Submit Rating</button>
-
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
         <div v-if="successMessage" class="success-message">
           {{ successMessage }}
         </div>
@@ -522,6 +539,17 @@ onMounted(() => {
   border-radius: 12px;
 
   color: #777;
+}
+
+.error-message {
+  margin-top: 20px;
+  padding: 14px;
+
+  background: #fdecec;
+  color: #b42318;
+
+  border: 1px solid #f3c7c4;
+  border-radius: 8px;
 }
 
 /* Mobile */
