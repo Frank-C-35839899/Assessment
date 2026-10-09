@@ -1,3 +1,7 @@
+<script setup>
+import singapore1 from '../assets/Singapore1.png'
+</script>
+
 <template>
   <div class="urban-page">
     <!-- Hero -->
@@ -36,8 +40,7 @@
       <div class="city-grid">
         <!-- Singapore -->
         <router-link to="/urban-greening/singapore" class="city-card">
-          <div class="city-image-placeholder">Singapore</div>
-
+          <img :src="singapore1" alt="Singapore urban greening" class="city-image" />
           <div class="city-content">
             <h3>Singapore</h3>
 
@@ -255,6 +258,14 @@
 }
 
 /* City Section */
+.city-image {
+  width: 100%;
+  height: 210px;
+
+  object-fit: cover;
+
+  display: block;
+}
 
 .city-section {
   padding: 80px 20px;
