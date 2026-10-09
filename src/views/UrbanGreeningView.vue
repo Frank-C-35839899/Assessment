@@ -1,5 +1,8 @@
 <script setup>
 import singapore1 from '../assets/Singapore1.png'
+import copenhagen1 from '../assets/Copenhagen1.png'
+import vancouver1 from '../assets/Vancouver1.png'
+import melbourne1 from '../assets/Melbourne1.png'
 </script>
 
 <template>
@@ -54,7 +57,7 @@ import singapore1 from '../assets/Singapore1.png'
 
         <!-- Copenhagen -->
         <router-link to="/urban-greening/copenhagen" class="city-card">
-          <div class="city-image-placeholder">Copenhagen</div>
+          <img :src="copenhagen1" alt="Copenhagen urban greening" class="city-image" />
 
           <div class="city-content">
             <h3>Copenhagen</h3>
@@ -70,7 +73,7 @@ import singapore1 from '../assets/Singapore1.png'
 
         <!-- Vancouver -->
         <router-link to="/urban-greening/vancouver" class="city-card">
-          <div class="city-image-placeholder">Vancouver</div>
+          <img :src="vancouver1" alt="Vancouver urban greening" class="city-image" />
 
           <div class="city-content">
             <h3>Vancouver</h3>
@@ -86,7 +89,7 @@ import singapore1 from '../assets/Singapore1.png'
 
         <!-- Melbourne -->
         <router-link to="/urban-greening/melbourne" class="city-card">
-          <div class="city-image-placeholder">Melbourne</div>
+          <img :src="melbourne1" alt="Melbourne urban greening" class="city-image" />
 
           <div class="city-content">
             <h3>Melbourne</h3>

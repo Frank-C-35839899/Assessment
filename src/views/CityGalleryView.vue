@@ -6,43 +6,47 @@ import singapore1 from '../assets/Singapore1.png'
 import singapore2 from '../assets/Singapore2.png'
 import singapore3 from '../assets/Singapore3.png'
 
+import copenhagen1 from '../assets/Copenhagen1.png'
+import copenhagen2 from '../assets/Copenhagen2.png'
+import copenhagen3 from '../assets/Copenhagen3.png'
+
+import vancouver1 from '../assets/Vancouver1.png'
+import vancouver2 from '../assets/Vancouver2.png'
+import vancouver3 from '../assets/Vancouver3.png'
+
+import melbourne1 from '../assets/Melbourne1.png'
+import melbourne2 from '../assets/Melbourne2.png'
+import melbourne3 from '../assets/Melbourne3.png'
+
 const route = useRoute()
 
 const cityData = {
   singapore: {
     name: 'Singapore',
-
     description:
       'Explore examples of how Singapore integrates vegetation, green architecture and public green spaces into its urban environment.',
-
     images: [singapore1, singapore2, singapore3],
   },
 
   copenhagen: {
     name: 'Copenhagen',
-
     description:
       'Explore examples of Copenhagen’s green public spaces, sustainable urban planning and environmentally friendly city design.',
-
-    images: [],
+    images: [copenhagen1, copenhagen2, copenhagen3],
   },
 
   vancouver: {
     name: 'Vancouver',
-
     description:
       'Explore examples of Vancouver’s connection between natural landscapes, urban parks and sustainable development.',
-
-    images: [],
+    images: [vancouver1, vancouver2, vancouver3],
   },
 
   melbourne: {
     name: 'Melbourne',
-
     description:
       'Explore examples of Melbourne’s urban forests, green spaces and community greening initiatives.',
-
-    images: [],
+    images: [melbourne1, melbourne2, melbourne3],
   },
 }
 
