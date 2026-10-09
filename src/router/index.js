@@ -15,6 +15,7 @@ import RegisterView from '../views/RegisterView.vue'
 import LoginView from '../views/LoginView.vue'
 import AdminView from '../views/AdminView.vue'
 import RatingView from '../views/RatingView.vue'
+import CityGalleryView from '../views/CityGalleryView.vue'
 
 const routes = [
   {
@@ -94,6 +95,11 @@ const routes = [
     path: '/rating',
     name: 'Rating',
     component: RatingView,
+  },
+  {
+    path: '/urban-greening/:city',
+    name: 'CityGallery',
+    component: CityGalleryView,
   },
 ]
 
