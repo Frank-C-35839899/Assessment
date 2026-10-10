@@ -108,9 +108,7 @@ const errorMessage = ref('')
 
         <div class="title-line"></div>
 
-        <p>
-          Tell us about your experience with the Green Melbourne website and community services.
-        </p>
+        <p>Tell us about your experience with the Urban Canopy website and community services.</p>
       </div>
 
       <!-- Rating summary -->

@@ -25,7 +25,7 @@ const initialiseAdmin = async () => {
 
     users.push({
       id: Date.now(),
-      name: 'Green Melbourne Admin',
+      name: 'Urban Canopy Admin',
       email: adminEmail,
       password: hashedPassword,
       role: 'admin',

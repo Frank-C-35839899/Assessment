@@ -132,7 +132,7 @@ const clearForm = () => {
   <div class="register-page">
     <div class="register-container">
       <div class="page-header">
-        <p class="page-tag">JOIN GREEN MELBOURNE</p>
+        <p class="page-tag">JOIN Urban Canopy</p>
 
         <h1>Create an Account</h1>
 

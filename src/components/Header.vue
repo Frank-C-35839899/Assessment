@@ -45,10 +45,10 @@ onMounted(() => {
   <header class="site-header">
     <!-- Logo / Brand -->
     <router-link to="/" class="brand" @click="closeMenu">
-      <img :src="logo" alt="Green Melbourne logo" class="brand-logo" />
+      <img :src="logo" alt="Urban Canopy logo" class="brand-logo" />
 
       <div class="brand-text">
-        <div class="brand-name">Green Melbourne</div>
+        <div class="brand-name">Urban Canopy</div>
 
         <div class="brand-tagline">GREENER · HEALTHIER · TOGETHER</div>
       </div>

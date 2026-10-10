@@ -60,7 +60,7 @@ const loginUser = async () => {
 
         <div class="title-line"></div>
 
-        <p>Sign in to access your Green Melbourne account.</p>
+        <p>Sign in to access your Urban Canopy account.</p>
       </div>
 
       <form class="login-form" @submit.prevent="loginUser">
