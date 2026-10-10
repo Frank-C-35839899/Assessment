@@ -120,6 +120,84 @@ const openStep = (step) => {
 const closeStep = () => {
   selectedStep.value = null
 }
+
+const treeSelection = ref({
+  sunlight: '',
+  space: '',
+  drainage: '',
+})
+
+const treeRecommendation = ref(null)
+
+const findTreeRecommendation = () => {
+  const sunlight = treeSelection.value.sunlight
+  const space = treeSelection.value.space
+  const drainage = treeSelection.value.drainage
+
+  if (!sunlight || !space || !drainage) {
+    treeRecommendation.value = {
+      error: true,
+      title: 'Please complete all selections.',
+      text: 'Choose the sunlight, available space and soil drainage before viewing a recommendation.',
+    }
+
+    return
+  }
+
+  if (space === 'small') {
+    treeRecommendation.value = {
+      error: false,
+      title: 'Small Native Tree or Large Shrub',
+      text: 'A smaller native tree or large shrub may be more suitable where growing space is limited.',
+      reasons: [
+        `Suitable for ${sunlight === 'full' ? 'full sun' : 'partially shaded'} conditions.`,
+        'More appropriate for restricted urban spaces.',
+        `Consider species suited to ${drainage} soil drainage.`,
+        'Native vegetation can provide habitat and resources for local wildlife.',
+      ],
+    }
+
+    return
+  }
+
+  if (space === 'medium') {
+    treeRecommendation.value = {
+      error: false,
+      title: 'Medium-Sized Native Tree',
+      text: 'A medium-sized native tree can provide shade and habitat without requiring the space of a very large canopy tree.',
+      reasons: [
+        `Suitable for a site with ${sunlight === 'full' ? 'good sunlight exposure' : 'some shade'}.`,
+        'Provides useful canopy cover while remaining suitable for medium-sized spaces.',
+        `Choose a species compatible with ${drainage} drainage conditions.`,
+        'Can contribute to urban cooling and biodiversity.',
+      ],
+    }
+
+    return
+  }
+
+  treeRecommendation.value = {
+    error: false,
+    title: 'Larger Canopy or Shade Tree',
+    text: 'Where sufficient space is available, a larger tree may provide greater shade, habitat and long-term urban greening benefits.',
+    reasons: [
+      `Consider a species suited to ${sunlight === 'full' ? 'full sun' : 'partial shade'}.`,
+      'Large sites can accommodate wider canopies and larger root systems.',
+      `Check that the species is suitable for ${drainage} soil drainage.`,
+      'Allow enough distance from buildings, paths and infrastructure.',
+    ],
+  }
+}
+
+const resetTreeSelection = () => {
+  treeSelection.value = {
+    sunlight: '',
+    space: '',
+    drainage: '',
+  }
+
+  treeRecommendation.value = null
+}
 </script>
 
 <template>
@@ -307,8 +385,8 @@ const closeStep = () => {
     </div>
 
     <!-- =========================
-         Choosing the Right Tree
-    ========================== -->
+     Choosing the Right Tree
+========================== -->
     <section class="choice-section">
       <div class="section-header">
         <p class="section-tag">PLAN BEFORE YOU PLANT</p>
@@ -318,11 +396,97 @@ const closeStep = () => {
         <div class="section-line"></div>
 
         <p>
-          The right species and planting location can help a tree establish successfully and provide
-          long-term benefits.
+          Every planting location is different. Use this simple guide to think about the type of
+          tree that may suit your available space and growing conditions.
         </p>
       </div>
 
+      <!-- Selection Tool -->
+      <div class="tree-selector">
+        <div class="selector-header">
+          <h3>Tree Selection Guide</h3>
+
+          <p>Select the conditions that best describe your planting site.</p>
+        </div>
+
+        <div class="selector-grid">
+          <!-- Sunlight -->
+          <div class="selector-group">
+            <label for="sunlight"> Sunlight </label>
+
+            <select id="sunlight" v-model="treeSelection.sunlight">
+              <option value="">Select sunlight</option>
+
+              <option value="full">Full Sun</option>
+
+              <option value="partial">Partial Shade</option>
+            </select>
+          </div>
+
+          <!-- Space -->
+          <div class="selector-group">
+            <label for="space"> Available Space </label>
+
+            <select id="space" v-model="treeSelection.space">
+              <option value="">Select space</option>
+
+              <option value="small">Small</option>
+
+              <option value="medium">Medium</option>
+
+              <option value="large">Large</option>
+            </select>
+          </div>
+
+          <!-- Drainage -->
+          <div class="selector-group">
+            <label for="drainage"> Soil Drainage </label>
+
+            <select id="drainage" v-model="treeSelection.drainage">
+              <option value="">Select drainage</option>
+
+              <option value="good">Good</option>
+
+              <option value="moderate">Moderate</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="selector-actions">
+          <button class="recommend-button" @click="findTreeRecommendation">
+            Find a Suitable Tree Type
+          </button>
+
+          <button class="reset-button" @click="resetTreeSelection">Reset</button>
+        </div>
+
+        <!-- Result -->
+        <div
+          v-if="treeRecommendation"
+          class="recommendation-box"
+          :class="{ error: treeRecommendation.error }"
+        >
+          <p class="recommendation-label">
+            {{ treeRecommendation.error ? 'SELECTION REQUIRED' : 'YOUR RECOMMENDATION' }}
+          </p>
+
+          <h3>
+            {{ treeRecommendation.title }}
+          </h3>
+
+          <p>
+            {{ treeRecommendation.text }}
+          </p>
+
+          <ul v-if="!treeRecommendation.error" class="recommendation-list">
+            <li v-for="reason in treeRecommendation.reasons" :key="reason">
+              {{ reason }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Supporting Information -->
       <div class="choice-grid">
         <div class="choice-card">
           <h3>Native Species</h3>
@@ -850,6 +1014,205 @@ const closeStep = () => {
 
   line-height: 1.7;
 }
+.tree-selector {
+  max-width: 900px;
+
+  margin: 0 auto 45px;
+
+  padding: 35px;
+
+  background: #eef5ee;
+
+  border: 1px solid #dde8da;
+
+  border-radius: 20px;
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+.selector-header {
+  text-align: center;
+
+  margin-bottom: 30px;
+}
+
+.selector-header h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+
+  color: #2f6b3b;
+
+  font-size: 26px;
+}
+
+.selector-header p {
+  margin: 0;
+
+  color: #555;
+}
+
+.selector-grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 20px;
+}
+
+.selector-group label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #263c2b;
+
+  font-weight: 700;
+}
+
+.selector-group select {
+  width: 100%;
+
+  padding: 13px 14px;
+
+  font-family: inherit;
+  font-size: 15px;
+
+  color: #444;
+
+  background: white;
+
+  border: 1px solid #cbd9c7;
+
+  border-radius: 8px;
+
+  outline: none;
+}
+
+.selector-group select:focus {
+  border-color: #6f9f75;
+
+  box-shadow: 0 0 0 3px rgba(111, 159, 117, 0.15);
+}
+
+.selector-actions {
+  display: flex;
+
+  justify-content: center;
+
+  gap: 12px;
+
+  margin-top: 28px;
+
+  flex-wrap: wrap;
+}
+
+.recommend-button,
+.reset-button {
+  padding: 12px 22px;
+
+  border: none;
+
+  border-radius: 8px;
+
+  font-family: inherit;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.recommend-button {
+  background: #2f6b3b;
+
+  color: white;
+}
+
+.recommend-button:hover {
+  background: #25552f;
+
+  transform: translateY(-2px);
+}
+
+.reset-button {
+  background: white;
+
+  color: #2f6b3b;
+
+  border: 1px solid #b9cdb5;
+}
+
+.reset-button:hover {
+  background: #f7faf5;
+}
+
+/* Recommendation */
+
+.recommendation-box {
+  margin-top: 30px;
+
+  padding: 26px;
+
+  background: white;
+
+  border-left: 5px solid #7eb36a;
+
+  border-radius: 14px;
+}
+
+.recommendation-box.error {
+  border-left-color: #b42318;
+}
+
+.recommendation-label {
+  margin: 0 0 8px;
+
+  color: #7aa66d;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 2px;
+}
+
+.recommendation-box.error .recommendation-label {
+  color: #b42318;
+}
+
+.recommendation-box h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+
+  color: #2f6b3b;
+
+  font-size: 24px;
+}
+
+.recommendation-box.error h3 {
+  color: #b42318;
+}
+
+.recommendation-box p {
+  color: #555;
+
+  line-height: 1.7;
+}
+
+.recommendation-list {
+  margin-bottom: 0;
+
+  padding-left: 22px;
+
+  color: #555;
+}
+
+.recommendation-list li {
+  margin-bottom: 8px;
+
+  line-height: 1.6;
+}
 
 /* =========================
    Aftercare
@@ -990,6 +1353,14 @@ const closeStep = () => {
 }
 
 @media (max-width: 768px) {
+  .selector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tree-selector {
+    padding: 26px 20px;
+  }
+
   .hero-section {
     padding: 65px 16px;
   }
