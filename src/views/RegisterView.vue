@@ -1,5 +1,9 @@
 <script setup>
 import { ref } from 'vue'
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import { auth } from '../firebase'
+import { doc, setDoc } from 'firebase/firestore'
+import { db } from '../firebase'
 
 const formData = ref({
   name: '',
@@ -16,17 +20,6 @@ const errors = ref({
 })
 
 const successMessage = ref('')
-
-// Hash password before storing it
-const hashPassword = async (password) => {
-  const data = new TextEncoder().encode(password)
-
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-
-  return hashArray.map((byte) => byte.toString(16).padStart(2, '0')).join('')
-}
 
 // Validate form
 const validateForm = () => {
@@ -48,7 +41,7 @@ const validateForm = () => {
   // Email
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-  if (!emailPattern.test(formData.value.email)) {
+  if (!emailPattern.test(formData.value.email.trim())) {
     errors.value.email = 'Please enter a valid email address.'
     valid = false
   }
@@ -71,7 +64,7 @@ const validateForm = () => {
   return valid
 }
 
-// Register
+// Register with Firebase
 const registerUser = async () => {
   successMessage.value = ''
 
@@ -79,36 +72,39 @@ const registerUser = async () => {
     return
   }
 
-  // Read existing users
-  const users = JSON.parse(localStorage.getItem('users')) || []
+  try {
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      formData.value.email.trim(),
+      formData.value.password,
+    )
 
-  // Check duplicate email
-  const emailExists = users.some(
-    (user) => user.email.toLowerCase() === formData.value.email.trim().toLowerCase(),
-  )
+    await updateProfile(userCredential.user, {
+      displayName: formData.value.name.trim(),
+    })
 
-  if (emailExists) {
-    errors.value.email = 'An account with this email already exists.'
-    return
+    await setDoc(doc(db, 'users', userCredential.user.uid), {
+      name: formData.value.name.trim(),
+      email: formData.value.email.trim().toLowerCase(),
+      role: 'user',
+    })
+
+    successMessage.value = 'Registration successful! You can now log in.'
+
+    clearForm()
+  } catch (error) {
+    if (error.code === 'auth/email-already-in-use') {
+      errors.value.email = 'An account with this email already exists.'
+    } else if (error.code === 'auth/invalid-email') {
+      errors.value.email = 'Please enter a valid email address.'
+    } else if (error.code === 'auth/weak-password') {
+      errors.value.password = 'The password is too weak.'
+    } else {
+      errors.value.email = 'Registration failed. Please try again.'
+    }
+
+    console.error(error)
   }
-
-  const hashedPassword = await hashPassword(formData.value.password)
-
-  const newUser = {
-    id: Date.now(),
-    name: formData.value.name.trim(),
-    email: formData.value.email.trim().toLowerCase(),
-    password: hashedPassword,
-    role: 'user',
-  }
-
-  users.push(newUser)
-
-  localStorage.setItem('users', JSON.stringify(users))
-
-  successMessage.value = 'Registration successful! You can now log in.'
-
-  clearForm()
 }
 
 const clearForm = () => {

@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import logo from '../assets/header-logo.png'
+import { signOut } from 'firebase/auth'
+import { auth } from '../firebase'
 
 const router = useRouter()
 
@@ -26,14 +28,20 @@ const loadCurrentUser = () => {
   }
 }
 
-const logout = () => {
-  localStorage.removeItem('currentUser')
+const logout = async () => {
+  try {
+    await signOut(auth)
 
-  currentUser.value = null
+    localStorage.removeItem('currentUser')
 
-  closeMenu()
+    currentUser.value = null
 
-  router.push('/')
+    closeMenu()
+
+    router.push('/')
+  } catch (error) {
+    console.error('Logout failed:', error)
+  }
 }
 
 onMounted(() => {

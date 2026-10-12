@@ -1,8 +1,8 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, db } from '../firebase'
 
 const formData = ref({
   email: '',
@@ -11,42 +11,59 @@ const formData = ref({
 
 const errorMessage = ref('')
 
-const hashPassword = async (password) => {
-  const data = new TextEncoder().encode(password)
-
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-
-  return hashArray.map((byte) => byte.toString(16).padStart(2, '0')).join('')
-}
-
 const loginUser = async () => {
   errorMessage.value = ''
 
-  const users = JSON.parse(localStorage.getItem('users')) || []
-
-  const email = formData.value.email.trim().toLowerCase()
-
-  const hashedPassword = await hashPassword(formData.value.password)
-
-  const matchedUser = users.find((user) => user.email === email && user.password === hashedPassword)
-
-  if (!matchedUser) {
-    errorMessage.value = 'Invalid email or password.'
+  if (!formData.value.email || !formData.value.password) {
+    errorMessage.value = 'Please enter your email and password.'
     return
   }
 
-  const currentUser = {
-    id: matchedUser.id,
-    name: matchedUser.name,
-    email: matchedUser.email,
-    role: matchedUser.role,
+  try {
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      formData.value.email.trim(),
+      formData.value.password,
+    )
+
+    const firebaseUser = userCredential.user
+
+    const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
+
+    if (!userDoc.exists()) {
+      errorMessage.value = 'User profile could not be found.'
+      return
+    }
+
+    const userData = userDoc.data()
+
+    const currentUser = {
+      id: firebaseUser.uid,
+      name: userData.name || firebaseUser.displayName || 'User',
+      email: firebaseUser.email,
+      role: userData.role || 'user',
+    }
+
+    localStorage.setItem('currentUser', JSON.stringify(currentUser))
+
+    window.location.href = '/'
+  } catch (error) {
+    console.error(error)
+
+    if (
+      error.code === 'auth/invalid-credential' ||
+      error.code === 'auth/user-not-found' ||
+      error.code === 'auth/wrong-password'
+    ) {
+      errorMessage.value = 'Invalid email or password.'
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage.value = 'Please enter a valid email address.'
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMessage.value = 'Too many failed login attempts. Please try again later.'
+    } else {
+      errorMessage.value = 'Login failed. Please try again.'
+    }
   }
-
-  localStorage.setItem('currentUser', JSON.stringify(currentUser))
-
-  window.location.href = '/'
 }
 </script>
 
@@ -72,6 +89,7 @@ const loginUser = async () => {
             v-model="formData.email"
             type="email"
             placeholder="Enter your email"
+            autocomplete="email"
             required
           />
         </div>
@@ -84,6 +102,7 @@ const loginUser = async () => {
             v-model="formData.password"
             type="password"
             placeholder="Enter your password"
+            autocomplete="current-password"
             required
           />
         </div>
@@ -96,6 +115,7 @@ const loginUser = async () => {
 
         <p class="register-link">
           Don't have an account?
+
           <router-link to="/register"> Register here </router-link>
         </p>
       </form>
@@ -150,10 +170,8 @@ const loginUser = async () => {
 .login-form {
   padding: 35px;
   background: white;
-
   border: 1px solid #e4ebe1;
   border-radius: 18px;
-
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
 }
 
@@ -164,7 +182,6 @@ const loginUser = async () => {
 .form-group label {
   display: block;
   margin-bottom: 8px;
-
   font-weight: 600;
   color: #263c2b;
 }
@@ -172,20 +189,15 @@ const loginUser = async () => {
 .form-group input {
   width: 100%;
   padding: 13px 14px;
-
   font-size: 16px;
-
   border: 1px solid #ccd7ca;
   border-radius: 8px;
-
   outline: none;
-
   transition: 0.2s;
 }
 
 .form-group input:focus {
   border-color: #6f9f75;
-
   box-shadow: 0 0 0 3px rgba(111, 159, 117, 0.15);
 }
 
@@ -198,17 +210,14 @@ const loginUser = async () => {
 .login-button {
   width: 100%;
   padding: 14px;
-
   border: none;
   border-radius: 8px;
-
   background: #2f6b3b;
   color: white;
-
   font-size: 16px;
   font-weight: 700;
-
   cursor: pointer;
+  transition: 0.2s;
 }
 
 .login-button:hover {
