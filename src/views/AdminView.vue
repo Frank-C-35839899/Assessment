@@ -1,8 +1,49 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+
+/* =========================
+   Data
+========================= */
 
 const users = ref([])
 const volunteers = ref([])
+
+/* =========================
+   User Filters
+========================= */
+
+const userGlobalSearch = ref('')
+const userNameFilter = ref('')
+const userEmailFilter = ref('')
+const userRoleFilter = ref('')
+
+const userSortField = ref('')
+const userSortDirection = ref('asc')
+
+const userCurrentPage = ref(1)
+const userRowsPerPage = 10
+
+/* =========================
+   Volunteer Filters
+========================= */
+
+const volunteerGlobalSearch = ref('')
+const volunteerNameFilter = ref('')
+const volunteerEmailFilter = ref('')
+const volunteerActivityFilter = ref('')
+
+const volunteerSortField = ref('')
+const volunteerSortDirection = ref('asc')
+
+const volunteerCurrentPage = ref(1)
+const volunteerRowsPerPage = 10
+
+/* =========================
+   Load Data
+========================= */
 
 const loadData = () => {
   users.value = JSON.parse(localStorage.getItem('users')) || []
@@ -10,25 +51,511 @@ const loadData = () => {
   volunteers.value = JSON.parse(localStorage.getItem('volunteers')) || []
 }
 
+onMounted(() => {
+  loadData()
+})
+
+/* =========================
+   Delete User
+========================= */
+
 const deleteUser = (id) => {
   users.value = users.value.filter((user) => user.id !== id)
 
   localStorage.setItem('users', JSON.stringify(users.value))
+
+  if (userCurrentPage.value > userTotalPages.value) {
+    userCurrentPage.value = Math.max(1, userTotalPages.value)
+  }
 }
+
+/* =========================
+   Delete Volunteer
+========================= */
 
 const deleteVolunteer = (index) => {
   volunteers.value.splice(index, 1)
 
   localStorage.setItem('volunteers', JSON.stringify(volunteers.value))
+
+  if (volunteerCurrentPage.value > volunteerTotalPages.value) {
+    volunteerCurrentPage.value = Math.max(1, volunteerTotalPages.value)
+  }
 }
 
-onMounted(() => {
-  loadData()
+/* =========================
+   User Filtering
+========================= */
+
+const filteredUsers = computed(() => {
+  const global = userGlobalSearch.value.trim().toLowerCase()
+
+  const name = userNameFilter.value.trim().toLowerCase()
+
+  const email = userEmailFilter.value.trim().toLowerCase()
+
+  const role = userRoleFilter.value.trim().toLowerCase()
+
+  let result = users.value.filter((user) => {
+    const userName = String(user.name || '').toLowerCase()
+
+    const userEmail = String(user.email || '').toLowerCase()
+
+    const userRole = String(user.role || '').toLowerCase()
+
+    const matchesGlobal =
+      !global ||
+      userName.includes(global) ||
+      userEmail.includes(global) ||
+      userRole.includes(global)
+
+    const matchesName = !name || userName.includes(name)
+
+    const matchesEmail = !email || userEmail.includes(email)
+
+    const matchesRole = !role || userRole === role
+
+    return matchesGlobal && matchesName && matchesEmail && matchesRole
+  })
+
+  if (userSortField.value) {
+    result = [...result].sort((a, b) => {
+      const first = String(a[userSortField.value] || '').toLowerCase()
+
+      const second = String(b[userSortField.value] || '').toLowerCase()
+
+      if (first < second) {
+        return userSortDirection.value === 'asc' ? -1 : 1
+      }
+
+      if (first > second) {
+        return userSortDirection.value === 'asc' ? 1 : -1
+      }
+
+      return 0
+    })
+  }
+
+  return result
 })
+
+/* =========================
+   User Sorting
+========================= */
+
+const sortUsers = (field) => {
+  if (userSortField.value === field) {
+    userSortDirection.value = userSortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    userSortField.value = field
+    userSortDirection.value = 'asc'
+  }
+}
+
+const getUserSortSymbol = (field) => {
+  if (userSortField.value !== field) {
+    return '↕'
+  }
+
+  return userSortDirection.value === 'asc' ? '↑' : '↓'
+}
+
+/* =========================
+   User Pagination
+========================= */
+
+const userTotalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredUsers.value.length / userRowsPerPage))
+})
+
+const paginatedUsers = computed(() => {
+  const start = (userCurrentPage.value - 1) * userRowsPerPage
+
+  const end = start + userRowsPerPage
+
+  return filteredUsers.value.slice(start, end)
+})
+
+const previousUserPage = () => {
+  if (userCurrentPage.value > 1) {
+    userCurrentPage.value--
+  }
+}
+
+const nextUserPage = () => {
+  if (userCurrentPage.value < userTotalPages.value) {
+    userCurrentPage.value++
+  }
+}
+
+/* =========================
+   Reset User Filters
+========================= */
+
+const resetUserFilters = () => {
+  userGlobalSearch.value = ''
+  userNameFilter.value = ''
+  userEmailFilter.value = ''
+  userRoleFilter.value = ''
+
+  userCurrentPage.value = 1
+}
+
+/* =========================
+   Volunteer Filtering
+========================= */
+
+const filteredVolunteers = computed(() => {
+  const global = volunteerGlobalSearch.value.trim().toLowerCase()
+
+  const name = volunteerNameFilter.value.trim().toLowerCase()
+
+  const email = volunteerEmailFilter.value.trim().toLowerCase()
+
+  const activity = volunteerActivityFilter.value.trim().toLowerCase()
+
+  let result = volunteers.value
+    .map((volunteer, index) => ({
+      ...volunteer,
+
+      originalIndex: index,
+    }))
+    .filter((volunteer) => {
+      const volunteerName = String(volunteer.name || '').toLowerCase()
+
+      const volunteerEmail = String(volunteer.email || '').toLowerCase()
+
+      const volunteerActivity = String(volunteer.activity || '').toLowerCase()
+
+      const volunteerAvailability = String(volunteer.availability || '').toLowerCase()
+
+      const volunteerExperience = String(volunteer.experience || '').toLowerCase()
+
+      const volunteerReason = String(volunteer.reason || '').toLowerCase()
+
+      const matchesGlobal =
+        !global ||
+        volunteerName.includes(global) ||
+        volunteerEmail.includes(global) ||
+        volunteerActivity.includes(global) ||
+        volunteerAvailability.includes(global) ||
+        volunteerExperience.includes(global) ||
+        volunteerReason.includes(global)
+
+      const matchesName = !name || volunteerName.includes(name)
+
+      const matchesEmail = !email || volunteerEmail.includes(email)
+
+      const matchesActivity = !activity || volunteerActivity.includes(activity)
+
+      return matchesGlobal && matchesName && matchesEmail && matchesActivity
+    })
+
+  if (volunteerSortField.value) {
+    result = [...result].sort((a, b) => {
+      const first = String(a[volunteerSortField.value] || '').toLowerCase()
+
+      const second = String(b[volunteerSortField.value] || '').toLowerCase()
+
+      if (first < second) {
+        return volunteerSortDirection.value === 'asc' ? -1 : 1
+      }
+
+      if (first > second) {
+        return volunteerSortDirection.value === 'asc' ? 1 : -1
+      }
+
+      return 0
+    })
+  }
+
+  return result
+})
+
+/* =========================
+   Volunteer Sorting
+========================= */
+
+const sortVolunteers = (field) => {
+  if (volunteerSortField.value === field) {
+    volunteerSortDirection.value = volunteerSortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    volunteerSortField.value = field
+    volunteerSortDirection.value = 'asc'
+  }
+}
+
+const getVolunteerSortSymbol = (field) => {
+  if (volunteerSortField.value !== field) {
+    return '↕'
+  }
+
+  return volunteerSortDirection.value === 'asc' ? '↑' : '↓'
+}
+
+/* =========================
+   Volunteer Pagination
+========================= */
+
+const volunteerTotalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredVolunteers.value.length / volunteerRowsPerPage))
+})
+
+const paginatedVolunteers = computed(() => {
+  const start = (volunteerCurrentPage.value - 1) * volunteerRowsPerPage
+
+  const end = start + volunteerRowsPerPage
+
+  return filteredVolunteers.value.slice(start, end)
+})
+
+const previousVolunteerPage = () => {
+  if (volunteerCurrentPage.value > 1) {
+    volunteerCurrentPage.value--
+  }
+}
+
+const nextVolunteerPage = () => {
+  if (volunteerCurrentPage.value < volunteerTotalPages.value) {
+    volunteerCurrentPage.value++
+  }
+}
+
+/* =========================
+   Reset Volunteer Filters
+========================= */
+
+const resetVolunteerFilters = () => {
+  volunteerGlobalSearch.value = ''
+  volunteerNameFilter.value = ''
+  volunteerEmailFilter.value = ''
+  volunteerActivityFilter.value = ''
+
+  volunteerCurrentPage.value = 1
+}
+
+/* =========================
+   CSV Helper
+========================= */
+
+const escapeCSV = (value) => {
+  const text = String(value ?? '')
+
+  const escaped = text.replace(/"/g, '""')
+
+  return `"${escaped}"`
+}
+
+const downloadCSV = (rows, headers, filename) => {
+  const csvRows = []
+
+  csvRows.push(headers.map((header) => escapeCSV(header.label)).join(','))
+
+  rows.forEach((row) => {
+    const values = headers.map((header) => {
+      return escapeCSV(row[header.key])
+    })
+
+    csvRows.push(values.join(','))
+  })
+
+  const csvContent = csvRows.join('\n')
+
+  const blob = new Blob([csvContent], {
+    type: 'text/csv;charset=utf-8;',
+  })
+
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement('a')
+
+  link.href = url
+
+  link.download = filename
+
+  document.body.appendChild(link)
+
+  link.click()
+
+  document.body.removeChild(link)
+
+  URL.revokeObjectURL(url)
+}
+
+/* =========================
+   Export Users CSV
+========================= */
+
+const exportUsersCSV = () => {
+  const headers = [
+    {
+      label: 'Name',
+      key: 'name',
+    },
+
+    {
+      label: 'Email',
+      key: 'email',
+    },
+
+    {
+      label: 'Role',
+      key: 'role',
+    },
+  ]
+
+  downloadCSV(filteredUsers.value, headers, 'urban-canopy-users.csv')
+}
+
+/* =========================
+   Export Volunteers CSV
+========================= */
+
+const exportVolunteersCSV = () => {
+  const headers = [
+    {
+      label: 'Name',
+      key: 'name',
+    },
+
+    {
+      label: 'Email',
+      key: 'email',
+    },
+
+    {
+      label: 'Activity',
+      key: 'activity',
+    },
+
+    {
+      label: 'Availability',
+      key: 'availability',
+    },
+
+    {
+      label: 'Experience',
+      key: 'experience',
+    },
+
+    {
+      label: 'Reason',
+      key: 'reason',
+    },
+  ]
+
+  downloadCSV(filteredVolunteers.value, headers, 'urban-canopy-volunteers.csv')
+}
+
+/* =========================
+   Export Users PDF
+========================= */
+
+const exportUsersPDF = () => {
+  const doc = new jsPDF()
+
+  doc.setFontSize(18)
+
+  doc.text('Urban Canopy - Registered Users', 14, 20)
+
+  doc.setFontSize(10)
+
+  doc.text(`Total records: ${filteredUsers.value.length}`, 14, 28)
+
+  const rows = filteredUsers.value.map((user) => [
+    user.name || '',
+    user.email || '',
+    user.role || '',
+  ])
+
+  autoTable(doc, {
+    startY: 35,
+
+    head: [['Name', 'Email', 'Role']],
+
+    body: rows,
+
+    styles: {
+      fontSize: 9,
+    },
+
+    headStyles: {
+      fillColor: [47, 107, 59],
+    },
+  })
+
+  doc.save('urban-canopy-users.pdf')
+}
+
+/* =========================
+   Export Volunteers PDF
+========================= */
+
+const exportVolunteersPDF = () => {
+  const doc = new jsPDF({
+    orientation: 'landscape',
+  })
+
+  doc.setFontSize(18)
+
+  doc.text('Urban Canopy - Volunteer Applications', 14, 20)
+
+  doc.setFontSize(10)
+
+  doc.text(`Total records: ${filteredVolunteers.value.length}`, 14, 28)
+
+  const rows = filteredVolunteers.value.map((volunteer) => [
+    volunteer.name || '',
+
+    volunteer.email || '',
+
+    volunteer.activity || '',
+
+    volunteer.availability || '',
+
+    volunteer.experience || 'Not provided',
+
+    volunteer.reason || 'Not provided',
+  ])
+
+  autoTable(doc, {
+    startY: 35,
+
+    head: [['Name', 'Email', 'Activity', 'Availability', 'Experience', 'Reason']],
+
+    body: rows,
+
+    styles: {
+      fontSize: 8,
+
+      cellPadding: 3,
+    },
+
+    headStyles: {
+      fillColor: [47, 107, 59],
+    },
+
+    columnStyles: {
+      4: {
+        cellWidth: 45,
+      },
+
+      5: {
+        cellWidth: 55,
+      },
+    },
+  })
+
+  doc.save('urban-canopy-volunteers.pdf')
+}
 </script>
 
 <template>
   <div class="admin-page">
+    <!-- =========================
+         Header
+    ========================== -->
+
     <div class="page-header">
       <p class="page-tag">ADMINISTRATION</p>
 
@@ -36,31 +563,137 @@ onMounted(() => {
 
       <div class="title-line"></div>
 
-      <p>Manage registered users and review volunteer applications.</p>
+      <p>
+        Manage registered users and volunteer applications using searchable, sortable, paginated and
+        exportable tables.
+      </p>
     </div>
 
-    <!-- Users -->
+    <!-- =========================
+         Registered Users
+    ========================== -->
+
     <section class="admin-section">
-      <h2>Registered Users</h2>
+      <div class="section-title">
+        <div>
+          <h2>Registered Users</h2>
 
-      <div v-if="users.length === 0" class="empty-message">No registered users.</div>
+          <p>Search, sort, filter, export and manage Urban Canopy users.</p>
+        </div>
 
-      <div v-else class="table-wrapper">
+        <div class="record-count">
+          {{ filteredUsers.length }}
+
+          result<span v-if="filteredUsers.length !== 1"> s </span>
+        </div>
+      </div>
+
+      <!-- Export buttons -->
+
+      <div class="export-actions">
+        <button class="export-button" @click="exportUsersCSV">Export CSV</button>
+
+        <button class="export-button pdf-button" @click="exportUsersPDF">Export PDF</button>
+      </div>
+
+      <!-- Global Search -->
+
+      <div class="table-controls">
+        <div class="control-group wide-control">
+          <label for="user-global-search"> Global Search </label>
+
+          <input
+            id="user-global-search"
+            v-model="userGlobalSearch"
+            type="text"
+            placeholder="Search name, email or role..."
+            @input="userCurrentPage = 1"
+          />
+        </div>
+
+        <button class="reset-button" @click="resetUserFilters">Reset Filters</button>
+      </div>
+
+      <!-- Column Filters -->
+
+      <div class="filter-grid">
+        <div class="control-group">
+          <label for="user-name-filter"> Name </label>
+
+          <input
+            id="user-name-filter"
+            v-model="userNameFilter"
+            type="text"
+            placeholder="Search name"
+            @input="userCurrentPage = 1"
+          />
+        </div>
+
+        <div class="control-group">
+          <label for="user-email-filter"> Email </label>
+
+          <input
+            id="user-email-filter"
+            v-model="userEmailFilter"
+            type="text"
+            placeholder="Search email"
+            @input="userCurrentPage = 1"
+          />
+        </div>
+
+        <div class="control-group">
+          <label for="user-role-filter"> Role </label>
+
+          <select id="user-role-filter" v-model="userRoleFilter" @change="userCurrentPage = 1">
+            <option value="">All Roles</option>
+
+            <option value="user">User</option>
+
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- User Table -->
+
+      <div class="table-wrapper">
         <table>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
+              <th>
+                <button class="sort-button" @click="sortUsers('name')">
+                  Name
+                  {{ getUserSortSymbol('name') }}
+                </button>
+              </th>
+
+              <th>
+                <button class="sort-button" @click="sortUsers('email')">
+                  Email
+                  {{ getUserSortSymbol('email') }}
+                </button>
+              </th>
+
+              <th>
+                <button class="sort-button" @click="sortUsers('role')">
+                  Role
+                  {{ getUserSortSymbol('role') }}
+                </button>
+              </th>
+
               <th>Action</th>
             </tr>
           </thead>
 
           <tbody>
-            <tr v-for="user in users" :key="user.id">
-              <td>{{ user.name }}</td>
+            <tr v-for="user in paginatedUsers" :key="user.id">
+              <td>
+                {{ user.name }}
+              </td>
 
-              <td>{{ user.email }}</td>
+              <td>
+                {{ user.email }}
+              </td>
 
               <td>
                 <span class="role-badge" :class="user.role">
@@ -80,49 +713,239 @@ onMounted(() => {
                 <span v-else class="protected-text"> Protected </span>
               </td>
             </tr>
+
+            <tr v-if="paginatedUsers.length === 0">
+              <td colspan="4" class="empty-message">No users found.</td>
+            </tr>
           </tbody>
         </table>
       </div>
+
+      <!-- User Pagination -->
+
+      <div class="pagination">
+        <button class="page-button" :disabled="userCurrentPage === 1" @click="previousUserPage">
+          ← Previous
+        </button>
+
+        <span>
+          Page
+          {{ userCurrentPage }}
+          of
+          {{ userTotalPages }}
+        </span>
+
+        <button
+          class="page-button"
+          :disabled="userCurrentPage === userTotalPages"
+          @click="nextUserPage"
+        >
+          Next →
+        </button>
+      </div>
+
+      <p class="rows-note">Showing a maximum of 10 rows per page.</p>
     </section>
 
-    <!-- Volunteers -->
+    <!-- =========================
+         Volunteer Applications
+    ========================== -->
+
     <section class="admin-section">
-      <h2>Volunteer Applications</h2>
+      <div class="section-title">
+        <div>
+          <h2>Volunteer Applications</h2>
 
-      <div v-if="volunteers.length === 0" class="empty-message">No volunteer applications.</div>
+          <p>Search, sort, export and manage volunteer applications.</p>
+        </div>
 
-      <div v-else class="volunteer-grid">
-        <div v-for="(volunteer, index) in volunteers" :key="index" class="volunteer-card">
-          <h3>{{ volunteer.name }}</h3>
+        <div class="record-count">
+          {{ filteredVolunteers.length }}
 
-          <p>
-            <strong>Email:</strong>
-            {{ volunteer.email }}
-          </p>
-
-          <p>
-            <strong>Activity:</strong>
-            {{ volunteer.activity }}
-          </p>
-
-          <p>
-            <strong>Availability:</strong>
-            {{ volunteer.availability }}
-          </p>
-
-          <p>
-            <strong>Experience:</strong>
-            {{ volunteer.experience || 'Not provided' }}
-          </p>
-
-          <p>
-            <strong>Reason:</strong>
-            {{ volunteer.reason || 'Not provided' }}
-          </p>
-
-          <button class="delete-button" @click="deleteVolunteer(index)">Delete Application</button>
+          result<span v-if="filteredVolunteers.length !== 1"> s </span>
         </div>
       </div>
+
+      <!-- Export Buttons -->
+
+      <div class="export-actions">
+        <button class="export-button" @click="exportVolunteersCSV">Export CSV</button>
+
+        <button class="export-button pdf-button" @click="exportVolunteersPDF">Export PDF</button>
+      </div>
+
+      <!-- Global Search -->
+
+      <div class="table-controls">
+        <div class="control-group wide-control">
+          <label for="volunteer-global-search"> Global Search </label>
+
+          <input
+            id="volunteer-global-search"
+            v-model="volunteerGlobalSearch"
+            type="text"
+            placeholder="Search all application fields..."
+            @input="volunteerCurrentPage = 1"
+          />
+        </div>
+
+        <button class="reset-button" @click="resetVolunteerFilters">Reset Filters</button>
+      </div>
+
+      <!-- Column Filters -->
+
+      <div class="filter-grid">
+        <div class="control-group">
+          <label for="volunteer-name-filter"> Name </label>
+
+          <input
+            id="volunteer-name-filter"
+            v-model="volunteerNameFilter"
+            type="text"
+            placeholder="Search name"
+            @input="volunteerCurrentPage = 1"
+          />
+        </div>
+
+        <div class="control-group">
+          <label for="volunteer-email-filter"> Email </label>
+
+          <input
+            id="volunteer-email-filter"
+            v-model="volunteerEmailFilter"
+            type="text"
+            placeholder="Search email"
+            @input="volunteerCurrentPage = 1"
+          />
+        </div>
+
+        <div class="control-group">
+          <label for="volunteer-activity-filter"> Activity </label>
+
+          <input
+            id="volunteer-activity-filter"
+            v-model="volunteerActivityFilter"
+            type="text"
+            placeholder="Search activity"
+            @input="volunteerCurrentPage = 1"
+          />
+        </div>
+      </div>
+
+      <!-- Volunteer Table -->
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>
+                <button class="sort-button" @click="sortVolunteers('name')">
+                  Name
+
+                  {{ getVolunteerSortSymbol('name') }}
+                </button>
+              </th>
+
+              <th>
+                <button class="sort-button" @click="sortVolunteers('email')">
+                  Email
+
+                  {{ getVolunteerSortSymbol('email') }}
+                </button>
+              </th>
+
+              <th>
+                <button class="sort-button" @click="sortVolunteers('activity')">
+                  Activity
+
+                  {{ getVolunteerSortSymbol('activity') }}
+                </button>
+              </th>
+
+              <th>
+                <button class="sort-button" @click="sortVolunteers('availability')">
+                  Availability
+
+                  {{ getVolunteerSortSymbol('availability') }}
+                </button>
+              </th>
+
+              <th>Experience</th>
+
+              <th>Reason</th>
+
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr v-for="volunteer in paginatedVolunteers" :key="volunteer.originalIndex">
+              <td>
+                {{ volunteer.name }}
+              </td>
+
+              <td>
+                {{ volunteer.email }}
+              </td>
+
+              <td>
+                {{ volunteer.activity }}
+              </td>
+
+              <td>
+                {{ volunteer.availability }}
+              </td>
+
+              <td>
+                {{ volunteer.experience || 'Not provided' }}
+              </td>
+
+              <td>
+                {{ volunteer.reason || 'Not provided' }}
+              </td>
+
+              <td>
+                <button class="delete-button" @click="deleteVolunteer(volunteer.originalIndex)">
+                  Delete
+                </button>
+              </td>
+            </tr>
+
+            <tr v-if="paginatedVolunteers.length === 0">
+              <td colspan="7" class="empty-message">No volunteer applications found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Volunteer Pagination -->
+
+      <div class="pagination">
+        <button
+          class="page-button"
+          :disabled="volunteerCurrentPage === 1"
+          @click="previousVolunteerPage"
+        >
+          ← Previous
+        </button>
+
+        <span>
+          Page
+          {{ volunteerCurrentPage }}
+          of
+          {{ volunteerTotalPages }}
+        </span>
+
+        <button
+          class="page-button"
+          :disabled="volunteerCurrentPage === volunteerTotalPages"
+          @click="nextVolunteerPage"
+        >
+          Next →
+        </button>
+      </div>
+
+      <p class="rows-note">Showing a maximum of 10 rows per page.</p>
     </section>
   </div>
 </template>
@@ -130,69 +953,292 @@ onMounted(() => {
 <style scoped>
 .admin-page {
   min-height: 100vh;
+
   padding: 70px 30px;
+
   background: #f7faf5;
 }
 
+/* =========================
+   Header
+========================= */
+
 .page-header {
+  max-width: 850px;
+
+  margin: 0 auto 50px;
+
   text-align: center;
-  margin-bottom: 50px;
 }
 
 .page-tag {
   margin-bottom: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 3px;
+
   color: #7aa66d;
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  letter-spacing: 3px;
 }
 
 .page-header h1 {
   margin: 0;
-  font-size: 48px;
+
   color: #2f6b3b;
+
+  font-size: 48px;
 }
 
 .title-line {
   width: 70px;
+
   height: 4px;
+
   margin: 15px auto 18px;
+
   background: #8fbe7f;
+
   border-radius: 10px;
 }
 
 .page-header p {
   color: #555;
+
+  line-height: 1.7;
 }
 
+/* =========================
+   Section
+========================= */
+
 .admin-section {
-  max-width: 1200px;
-  margin: 0 auto 40px;
+  max-width: 1350px;
+
+  margin: 0 auto 45px;
 
   padding: 30px;
 
   background: white;
 
   border: 1px solid #e3e8e1;
+
   border-radius: 18px;
 
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
-.admin-section h2 {
-  margin-top: 0;
-  margin-bottom: 25px;
+.section-title {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  gap: 20px;
+
+  margin-bottom: 20px;
+}
+
+.section-title h2 {
+  margin: 0 0 6px;
 
   color: #2f6b3b;
 }
 
+.section-title p {
+  margin: 0;
+
+  color: #666;
+}
+
+.record-count {
+  padding: 8px 14px;
+
+  background: #eef5ee;
+
+  color: #2f6b3b;
+
+  border-radius: 20px;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+/* =========================
+   Export
+========================= */
+
+.export-actions {
+  display: flex;
+
+  gap: 12px;
+
+  margin-bottom: 24px;
+
+  flex-wrap: wrap;
+}
+
+.export-button {
+  padding: 10px 18px;
+
+  border: none;
+
+  border-radius: 8px;
+
+  background: #2f6b3b;
+
+  color: white;
+
+  font-family: inherit;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.export-button:hover {
+  background: #25552f;
+
+  transform: translateY(-2px);
+}
+
+.pdf-button {
+  background: #527c59;
+}
+
+.pdf-button:hover {
+  background: #416748;
+}
+
+/* =========================
+   Controls
+========================= */
+
+.table-controls {
+  display: flex;
+
+  align-items: end;
+
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 20px;
+
+  flex-wrap: wrap;
+}
+
+.filter-grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 18px;
+
+  margin-bottom: 24px;
+}
+
+.control-group {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+.wide-control {
+  min-width: 300px;
+
+  flex: 1;
+}
+
+.control-group label {
+  color: #263c2b;
+
+  font-size: 14px;
+
+  font-weight: 700;
+}
+
+.control-group input,
+.control-group select {
+  width: 100%;
+
+  padding: 11px 12px;
+
+  font-family: inherit;
+
+  font-size: 14px;
+
+  background: white;
+
+  border: 1px solid #ccd7ca;
+
+  border-radius: 8px;
+
+  outline: none;
+}
+
+.control-group input:focus,
+.control-group select:focus {
+  border-color: #6f9f75;
+
+  box-shadow: 0 0 0 3px rgba(111, 159, 117, 0.15);
+}
+
+.reset-button {
+  padding: 11px 18px;
+
+  border: 1px solid #b9cdb5;
+
+  border-radius: 8px;
+
+  background: white;
+
+  color: #2f6b3b;
+
+  font-family: inherit;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.reset-button:hover {
+  background: #f2f7f0;
+}
+
+/* =========================
+   Table
+========================= */
+
 .table-wrapper {
+  width: 100%;
+
   overflow-x: auto;
+
+  border: 1px solid #e1e7df;
+
+  border-radius: 12px;
 }
 
 table {
   width: 100%;
+
+  min-width: 900px;
+
   border-collapse: collapse;
+}
+
+thead {
+  background: #eef5ee;
 }
 
 th,
@@ -201,13 +1247,48 @@ td {
 
   text-align: left;
 
-  border-bottom: 1px solid #e6e6e6;
+  vertical-align: top;
+
+  border-bottom: 1px solid #e5e9e4;
 }
 
 th {
-  background: #eef5ee;
   color: #2f4d34;
+
+  font-size: 14px;
 }
+
+td {
+  color: #444;
+
+  font-size: 14px;
+}
+
+tbody tr:hover {
+  background: #f8fbf6;
+}
+
+.sort-button {
+  padding: 0;
+
+  border: none;
+
+  background: none;
+
+  color: #2f4d34;
+
+  font-family: inherit;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+/* =========================
+   Badges / Actions
+========================= */
 
 .role-badge {
   display: inline-block;
@@ -217,16 +1298,21 @@ th {
   border-radius: 20px;
 
   font-size: 13px;
-  font-weight: 600;
+
+  font-weight: 700;
+
+  text-transform: capitalize;
 }
 
 .role-badge.user {
   background: #e8f3e7;
+
   color: #2f6b3b;
 }
 
 .role-badge.admin {
   background: #dbe8d7;
+
   color: #214f2d;
 }
 
@@ -234,12 +1320,20 @@ th {
   padding: 8px 14px;
 
   border: none;
+
   border-radius: 6px;
 
   background: #b42318;
+
   color: white;
 
+  font-family: inherit;
+
+  font-weight: 600;
+
   cursor: pointer;
+
+  transition: 0.2s;
 }
 
 .delete-button:hover {
@@ -248,46 +1342,81 @@ th {
 
 .protected-text {
   color: #777;
+
   font-size: 14px;
 }
 
-.volunteer-grid {
-  display: grid;
-
-  grid-template-columns: repeat(2, 1fr);
-
-  gap: 20px;
-}
-
-.volunteer-card {
-  padding: 22px;
-
-  background: #f8fbf6;
-
-  border: 1px solid #e2e9df;
-  border-radius: 14px;
-}
-
-.volunteer-card h3 {
-  margin-top: 0;
-  color: #2f6b3b;
-}
-
-.volunteer-card p {
-  line-height: 1.6;
-  color: #444;
-}
-
 .empty-message {
-  padding: 20px;
+  padding: 30px;
 
   text-align: center;
 
   color: #777;
-  background: #f8faf7;
-
-  border-radius: 8px;
 }
+
+/* =========================
+   Pagination
+========================= */
+
+.pagination {
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+  gap: 20px;
+
+  margin-top: 22px;
+
+  flex-wrap: wrap;
+
+  color: #555;
+
+  font-size: 14px;
+}
+
+.page-button {
+  padding: 9px 16px;
+
+  border: none;
+
+  border-radius: 7px;
+
+  background: #2f6b3b;
+
+  color: white;
+
+  font-family: inherit;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.page-button:hover:not(:disabled) {
+  background: #25552f;
+}
+
+.page-button:disabled {
+  opacity: 0.4;
+
+  cursor: not-allowed;
+}
+
+.rows-note {
+  margin-top: 12px;
+
+  text-align: center;
+
+  color: #777;
+
+  font-size: 13px;
+}
+
+/* =========================
+   Responsive
+========================= */
 
 @media (max-width: 768px) {
   .admin-page {
@@ -299,11 +1428,39 @@ th {
   }
 
   .admin-section {
-    padding: 20px;
+    padding: 20px 15px;
   }
 
-  .volunteer-grid {
+  .section-title {
+    flex-direction: column;
+
+    align-items: flex-start;
+  }
+
+  .filter-grid {
     grid-template-columns: 1fr;
+  }
+
+  .table-controls {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .wide-control {
+    min-width: 0;
+  }
+
+  .reset-button {
+    width: 100%;
+  }
+
+  .export-actions {
+    flex-direction: column;
+  }
+
+  .export-button {
+    width: 100%;
   }
 }
 </style>
