@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { db, functions } from '../firebase'
+import { httpsCallable } from 'firebase/functions'
 
 /* =========================
    Data
@@ -11,6 +13,48 @@ import autoTable from 'jspdf-autotable'
 const users = ref([])
 const volunteers = ref([])
 
+const loadingUsers = ref(false)
+const loadingVolunteers = ref(false)
+
+const userLoadError = ref('')
+const volunteerLoadError = ref('')
+
+const dashboardStats = ref({
+  totalUsers: 0,
+  totalVolunteers: 0,
+  totalRatings: 0,
+  averageRating: 0,
+})
+
+const loadingStats = ref(false)
+const statsError = ref('')
+
+const loadDashboardStats = async () => {
+  loadingStats.value = true
+  statsError.value = ''
+
+  try {
+    const getDashboardStats = httpsCallable(functions, 'getDashboardStats')
+
+    const result = await getDashboardStats()
+
+    dashboardStats.value = {
+      totalUsers: result.data.totalUsers || 0,
+
+      totalVolunteers: result.data.totalVolunteers || 0,
+
+      totalRatings: result.data.totalRatings || 0,
+
+      averageRating: result.data.averageRating || 0,
+    }
+  } catch (error) {
+    console.error('Failed to load dashboard stats:', error)
+
+    statsError.value = 'Unable to load dashboard statistics.'
+  } finally {
+    loadingStats.value = false
+  }
+}
 /* =========================
    User Filters
 ========================= */
@@ -42,30 +86,88 @@ const volunteerCurrentPage = ref(1)
 const volunteerRowsPerPage = 10
 
 /* =========================
-   Load Data
+   Load Firestore Users
 ========================= */
 
-const loadData = () => {
-  users.value = JSON.parse(localStorage.getItem('users')) || []
+const loadUsers = async () => {
+  loadingUsers.value = true
+  userLoadError.value = ''
 
-  volunteers.value = JSON.parse(localStorage.getItem('volunteers')) || []
+  try {
+    const snapshot = await getDocs(collection(db, 'users'))
+
+    users.value = snapshot.docs.map((document) => ({
+      id: document.id,
+      ...document.data(),
+    }))
+  } catch (error) {
+    console.error('Failed to load users:', error)
+
+    userLoadError.value = 'Unable to load registered users.'
+  } finally {
+    loadingUsers.value = false
+  }
 }
 
-onMounted(() => {
-  loadData()
+/* =========================
+   Load Firestore Volunteers
+========================= */
+
+const loadVolunteers = async () => {
+  loadingVolunteers.value = true
+  volunteerLoadError.value = ''
+
+  try {
+    const snapshot = await getDocs(collection(db, 'volunteers'))
+
+    volunteers.value = snapshot.docs.map((document) => ({
+      id: document.id,
+      ...document.data(),
+    }))
+  } catch (error) {
+    console.error('Failed to load volunteers:', error)
+
+    volunteerLoadError.value = 'Unable to load volunteer applications.'
+  } finally {
+    loadingVolunteers.value = false
+  }
+}
+
+/* =========================
+   Initial Load
+========================= */
+
+onMounted(async () => {
+  await Promise.all([loadUsers(), loadVolunteers(), loadDashboardStats()])
 })
 
 /* =========================
    Delete User
 ========================= */
 
-const deleteUser = (id) => {
-  users.value = users.value.filter((user) => user.id !== id)
+const deleteUser = async (user) => {
+  if (user.role === 'admin') {
+    return
+  }
 
-  localStorage.setItem('users', JSON.stringify(users.value))
+  const confirmed = window.confirm(`Delete user "${user.name}"?`)
 
-  if (userCurrentPage.value > userTotalPages.value) {
-    userCurrentPage.value = Math.max(1, userTotalPages.value)
+  if (!confirmed) {
+    return
+  }
+
+  try {
+    await deleteDoc(doc(db, 'users', user.id))
+
+    users.value = users.value.filter((item) => item.id !== user.id)
+
+    if (userCurrentPage.value > userTotalPages.value) {
+      userCurrentPage.value = Math.max(1, userTotalPages.value)
+    }
+  } catch (error) {
+    console.error('Failed to delete user:', error)
+
+    alert('Unable to delete user.')
   }
 }
 
@@ -73,13 +175,25 @@ const deleteUser = (id) => {
    Delete Volunteer
 ========================= */
 
-const deleteVolunteer = (index) => {
-  volunteers.value.splice(index, 1)
+const deleteVolunteer = async (volunteer) => {
+  const confirmed = window.confirm(`Delete volunteer application from "${volunteer.name}"?`)
 
-  localStorage.setItem('volunteers', JSON.stringify(volunteers.value))
+  if (!confirmed) {
+    return
+  }
 
-  if (volunteerCurrentPage.value > volunteerTotalPages.value) {
-    volunteerCurrentPage.value = Math.max(1, volunteerTotalPages.value)
+  try {
+    await deleteDoc(doc(db, 'volunteers', volunteer.id))
+
+    volunteers.value = volunteers.value.filter((item) => item.id !== volunteer.id)
+
+    if (volunteerCurrentPage.value > volunteerTotalPages.value) {
+      volunteerCurrentPage.value = Math.max(1, volunteerTotalPages.value)
+    }
+  } catch (error) {
+    console.error('Failed to delete volunteer:', error)
+
+    alert('Unable to delete volunteer application.')
   }
 }
 
@@ -197,7 +311,6 @@ const resetUserFilters = () => {
   userNameFilter.value = ''
   userEmailFilter.value = ''
   userRoleFilter.value = ''
-
   userCurrentPage.value = 1
 }
 
@@ -214,42 +327,36 @@ const filteredVolunteers = computed(() => {
 
   const activity = volunteerActivityFilter.value.trim().toLowerCase()
 
-  let result = volunteers.value
-    .map((volunteer, index) => ({
-      ...volunteer,
+  let result = volunteers.value.filter((volunteer) => {
+    const volunteerName = String(volunteer.name || '').toLowerCase()
 
-      originalIndex: index,
-    }))
-    .filter((volunteer) => {
-      const volunteerName = String(volunteer.name || '').toLowerCase()
+    const volunteerEmail = String(volunteer.email || '').toLowerCase()
 
-      const volunteerEmail = String(volunteer.email || '').toLowerCase()
+    const volunteerActivity = String(volunteer.activity || '').toLowerCase()
 
-      const volunteerActivity = String(volunteer.activity || '').toLowerCase()
+    const volunteerAvailability = String(volunteer.availability || '').toLowerCase()
 
-      const volunteerAvailability = String(volunteer.availability || '').toLowerCase()
+    const volunteerExperience = String(volunteer.experience || '').toLowerCase()
 
-      const volunteerExperience = String(volunteer.experience || '').toLowerCase()
+    const volunteerReason = String(volunteer.reason || '').toLowerCase()
 
-      const volunteerReason = String(volunteer.reason || '').toLowerCase()
+    const matchesGlobal =
+      !global ||
+      volunteerName.includes(global) ||
+      volunteerEmail.includes(global) ||
+      volunteerActivity.includes(global) ||
+      volunteerAvailability.includes(global) ||
+      volunteerExperience.includes(global) ||
+      volunteerReason.includes(global)
 
-      const matchesGlobal =
-        !global ||
-        volunteerName.includes(global) ||
-        volunteerEmail.includes(global) ||
-        volunteerActivity.includes(global) ||
-        volunteerAvailability.includes(global) ||
-        volunteerExperience.includes(global) ||
-        volunteerReason.includes(global)
+    const matchesName = !name || volunteerName.includes(name)
 
-      const matchesName = !name || volunteerName.includes(name)
+    const matchesEmail = !email || volunteerEmail.includes(email)
 
-      const matchesEmail = !email || volunteerEmail.includes(email)
+    const matchesActivity = !activity || volunteerActivity.includes(activity)
 
-      const matchesActivity = !activity || volunteerActivity.includes(activity)
-
-      return matchesGlobal && matchesName && matchesEmail && matchesActivity
-    })
+    return matchesGlobal && matchesName && matchesEmail && matchesActivity
+  })
 
   if (volunteerSortField.value) {
     result = [...result].sort((a, b) => {
@@ -281,6 +388,7 @@ const sortVolunteers = (field) => {
     volunteerSortDirection.value = volunteerSortDirection.value === 'asc' ? 'desc' : 'asc'
   } else {
     volunteerSortField.value = field
+
     volunteerSortDirection.value = 'asc'
   }
 }
@@ -327,15 +435,18 @@ const nextVolunteerPage = () => {
 
 const resetVolunteerFilters = () => {
   volunteerGlobalSearch.value = ''
+
   volunteerNameFilter.value = ''
+
   volunteerEmailFilter.value = ''
+
   volunteerActivityFilter.value = ''
 
   volunteerCurrentPage.value = 1
 }
 
 /* =========================
-   CSV Helper
+   CSV Helpers
 ========================= */
 
 const escapeCSV = (value) => {
@@ -352,9 +463,7 @@ const downloadCSV = (rows, headers, filename) => {
   csvRows.push(headers.map((header) => escapeCSV(header.label)).join(','))
 
   rows.forEach((row) => {
-    const values = headers.map((header) => {
-      return escapeCSV(row[header.key])
-    })
+    const values = headers.map((header) => escapeCSV(row[header.key]))
 
     csvRows.push(values.join(','))
   })
@@ -370,7 +479,6 @@ const downloadCSV = (rows, headers, filename) => {
   const link = document.createElement('a')
 
   link.href = url
-
   link.download = filename
 
   document.body.appendChild(link)
@@ -392,12 +500,10 @@ const exportUsersCSV = () => {
       label: 'Name',
       key: 'name',
     },
-
     {
       label: 'Email',
       key: 'email',
     },
-
     {
       label: 'Role',
       key: 'role',
@@ -417,27 +523,22 @@ const exportVolunteersCSV = () => {
       label: 'Name',
       key: 'name',
     },
-
     {
       label: 'Email',
       key: 'email',
     },
-
     {
       label: 'Activity',
       key: 'activity',
     },
-
     {
       label: 'Availability',
       key: 'availability',
     },
-
     {
       label: 'Experience',
       key: 'experience',
     },
-
     {
       label: 'Reason',
       key: 'reason',
@@ -452,15 +553,15 @@ const exportVolunteersCSV = () => {
 ========================= */
 
 const exportUsersPDF = () => {
-  const doc = new jsPDF()
+  const pdf = new jsPDF()
 
-  doc.setFontSize(18)
+  pdf.setFontSize(18)
 
-  doc.text('Urban Canopy - Registered Users', 14, 20)
+  pdf.text('Urban Canopy - Registered Users', 14, 20)
 
-  doc.setFontSize(10)
+  pdf.setFontSize(10)
 
-  doc.text(`Total records: ${filteredUsers.value.length}`, 14, 28)
+  pdf.text(`Total records: ${filteredUsers.value.length}`, 14, 28)
 
   const rows = filteredUsers.value.map((user) => [
     user.name || '',
@@ -468,7 +569,7 @@ const exportUsersPDF = () => {
     user.role || '',
   ])
 
-  autoTable(doc, {
+  autoTable(pdf, {
     startY: 35,
 
     head: [['Name', 'Email', 'Role']],
@@ -484,7 +585,7 @@ const exportUsersPDF = () => {
     },
   })
 
-  doc.save('urban-canopy-users.pdf')
+  pdf.save('urban-canopy-users.pdf')
 }
 
 /* =========================
@@ -492,33 +593,28 @@ const exportUsersPDF = () => {
 ========================= */
 
 const exportVolunteersPDF = () => {
-  const doc = new jsPDF({
+  const pdf = new jsPDF({
     orientation: 'landscape',
   })
 
-  doc.setFontSize(18)
+  pdf.setFontSize(18)
 
-  doc.text('Urban Canopy - Volunteer Applications', 14, 20)
+  pdf.text('Urban Canopy - Volunteer Applications', 14, 20)
 
-  doc.setFontSize(10)
+  pdf.setFontSize(10)
 
-  doc.text(`Total records: ${filteredVolunteers.value.length}`, 14, 28)
+  pdf.text(`Total records: ${filteredVolunteers.value.length}`, 14, 28)
 
   const rows = filteredVolunteers.value.map((volunteer) => [
     volunteer.name || '',
-
     volunteer.email || '',
-
     volunteer.activity || '',
-
     volunteer.availability || '',
-
     volunteer.experience || 'Not provided',
-
     volunteer.reason || 'Not provided',
   ])
 
-  autoTable(doc, {
+  autoTable(pdf, {
     startY: 35,
 
     head: [['Name', 'Email', 'Activity', 'Availability', 'Experience', 'Reason']],
@@ -527,7 +623,6 @@ const exportVolunteersPDF = () => {
 
     styles: {
       fontSize: 8,
-
       cellPadding: 3,
     },
 
@@ -539,23 +634,18 @@ const exportVolunteersPDF = () => {
       4: {
         cellWidth: 45,
       },
-
       5: {
         cellWidth: 55,
       },
     },
   })
 
-  doc.save('urban-canopy-volunteers.pdf')
+  pdf.save('urban-canopy-volunteers.pdf')
 }
 </script>
 
 <template>
   <div class="admin-page">
-    <!-- =========================
-         Header
-    ========================== -->
-
     <div class="page-header">
       <p class="page-tag">ADMINISTRATION</p>
 
@@ -568,6 +658,58 @@ const exportVolunteersPDF = () => {
         exportable tables.
       </p>
     </div>
+
+    <!-- Dashboard Statistics -->
+    <section class="stats-section">
+      <div v-if="loadingStats" class="stats-message">Loading dashboard statistics...</div>
+
+      <div v-else-if="statsError" class="stats-error">
+        {{ statsError }}
+      </div>
+
+      <div v-else class="stats-grid">
+        <div class="stat-card">
+          <p class="stat-label">REGISTERED USERS</p>
+
+          <div class="stat-value">
+            {{ dashboardStats.totalUsers }}
+          </div>
+
+          <p class="stat-description">Firebase registered users</p>
+        </div>
+
+        <div class="stat-card">
+          <p class="stat-label">VOLUNTEERS</p>
+
+          <div class="stat-value">
+            {{ dashboardStats.totalVolunteers }}
+          </div>
+
+          <p class="stat-description">Volunteer applications</p>
+        </div>
+
+        <div class="stat-card">
+          <p class="stat-label">RATINGS</p>
+
+          <div class="stat-value">
+            {{ dashboardStats.totalRatings }}
+          </div>
+
+          <p class="stat-description">Community ratings</p>
+        </div>
+
+        <div class="stat-card">
+          <p class="stat-label">AVERAGE RATING</p>
+
+          <div class="stat-value">
+            {{ dashboardStats.averageRating }}
+            <span class="stat-small"> / 5 </span>
+          </div>
+
+          <p class="stat-description">Average community score</p>
+        </div>
+      </div>
+    </section>
 
     <!-- =========================
          Registered Users
@@ -588,15 +730,17 @@ const exportVolunteersPDF = () => {
         </div>
       </div>
 
-      <!-- Export buttons -->
+      <p v-if="loadingUsers" class="status-message">Loading users...</p>
+
+      <p v-if="userLoadError" class="error-status">
+        {{ userLoadError }}
+      </p>
 
       <div class="export-actions">
         <button class="export-button" @click="exportUsersCSV">Export CSV</button>
 
         <button class="export-button pdf-button" @click="exportUsersPDF">Export PDF</button>
       </div>
-
-      <!-- Global Search -->
 
       <div class="table-controls">
         <div class="control-group wide-control">
@@ -613,8 +757,6 @@ const exportVolunteersPDF = () => {
 
         <button class="reset-button" @click="resetUserFilters">Reset Filters</button>
       </div>
-
-      <!-- Column Filters -->
 
       <div class="filter-grid">
         <div class="control-group">
@@ -653,8 +795,6 @@ const exportVolunteersPDF = () => {
           </select>
         </div>
       </div>
-
-      <!-- User Table -->
 
       <div class="table-wrapper">
         <table>
@@ -705,7 +845,7 @@ const exportVolunteersPDF = () => {
                 <button
                   v-if="user.role !== 'admin'"
                   class="delete-button"
-                  @click="deleteUser(user.id)"
+                  @click="deleteUser(user)"
                 >
                   Delete
                 </button>
@@ -714,14 +854,12 @@ const exportVolunteersPDF = () => {
               </td>
             </tr>
 
-            <tr v-if="paginatedUsers.length === 0">
+            <tr v-if="!loadingUsers && paginatedUsers.length === 0">
               <td colspan="4" class="empty-message">No users found.</td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <!-- User Pagination -->
 
       <div class="pagination">
         <button class="page-button" :disabled="userCurrentPage === 1" @click="previousUserPage">
@@ -766,15 +904,17 @@ const exportVolunteersPDF = () => {
         </div>
       </div>
 
-      <!-- Export Buttons -->
+      <p v-if="loadingVolunteers" class="status-message">Loading volunteer applications...</p>
+
+      <p v-if="volunteerLoadError" class="error-status">
+        {{ volunteerLoadError }}
+      </p>
 
       <div class="export-actions">
         <button class="export-button" @click="exportVolunteersCSV">Export CSV</button>
 
         <button class="export-button pdf-button" @click="exportVolunteersPDF">Export PDF</button>
       </div>
-
-      <!-- Global Search -->
 
       <div class="table-controls">
         <div class="control-group wide-control">
@@ -791,8 +931,6 @@ const exportVolunteersPDF = () => {
 
         <button class="reset-button" @click="resetVolunteerFilters">Reset Filters</button>
       </div>
-
-      <!-- Column Filters -->
 
       <div class="filter-grid">
         <div class="control-group">
@@ -832,8 +970,6 @@ const exportVolunteersPDF = () => {
         </div>
       </div>
 
-      <!-- Volunteer Table -->
-
       <div class="table-wrapper">
         <table>
           <thead>
@@ -841,7 +977,6 @@ const exportVolunteersPDF = () => {
               <th>
                 <button class="sort-button" @click="sortVolunteers('name')">
                   Name
-
                   {{ getVolunteerSortSymbol('name') }}
                 </button>
               </th>
@@ -849,7 +984,6 @@ const exportVolunteersPDF = () => {
               <th>
                 <button class="sort-button" @click="sortVolunteers('email')">
                   Email
-
                   {{ getVolunteerSortSymbol('email') }}
                 </button>
               </th>
@@ -857,7 +991,6 @@ const exportVolunteersPDF = () => {
               <th>
                 <button class="sort-button" @click="sortVolunteers('activity')">
                   Activity
-
                   {{ getVolunteerSortSymbol('activity') }}
                 </button>
               </th>
@@ -865,7 +998,6 @@ const exportVolunteersPDF = () => {
               <th>
                 <button class="sort-button" @click="sortVolunteers('availability')">
                   Availability
-
                   {{ getVolunteerSortSymbol('availability') }}
                 </button>
               </th>
@@ -879,7 +1011,7 @@ const exportVolunteersPDF = () => {
           </thead>
 
           <tbody>
-            <tr v-for="volunteer in paginatedVolunteers" :key="volunteer.originalIndex">
+            <tr v-for="volunteer in paginatedVolunteers" :key="volunteer.id">
               <td>
                 {{ volunteer.name }}
               </td>
@@ -905,20 +1037,16 @@ const exportVolunteersPDF = () => {
               </td>
 
               <td>
-                <button class="delete-button" @click="deleteVolunteer(volunteer.originalIndex)">
-                  Delete
-                </button>
+                <button class="delete-button" @click="deleteVolunteer(volunteer)">Delete</button>
               </td>
             </tr>
 
-            <tr v-if="paginatedVolunteers.length === 0">
+            <tr v-if="!loadingVolunteers && paginatedVolunteers.length === 0">
               <td colspan="7" class="empty-message">No volunteer applications found.</td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <!-- Volunteer Pagination -->
 
       <div class="pagination">
         <button
@@ -953,160 +1081,122 @@ const exportVolunteersPDF = () => {
 <style scoped>
 .admin-page {
   min-height: 100vh;
-
   padding: 70px 30px;
-
   background: #f7faf5;
 }
 
-/* =========================
-   Header
-========================= */
+/* Header */
 
 .page-header {
   max-width: 850px;
-
   margin: 0 auto 50px;
-
   text-align: center;
 }
 
 .page-tag {
   margin-bottom: 10px;
-
   color: #7aa66d;
-
   font-size: 13px;
-
   font-weight: 700;
-
   letter-spacing: 3px;
 }
 
 .page-header h1 {
   margin: 0;
-
   color: #2f6b3b;
-
   font-size: 48px;
 }
 
 .title-line {
   width: 70px;
-
   height: 4px;
-
   margin: 15px auto 18px;
-
   background: #8fbe7f;
-
   border-radius: 10px;
 }
 
 .page-header p {
   color: #555;
-
   line-height: 1.7;
 }
 
-/* =========================
-   Section
-========================= */
+/* Sections */
 
 .admin-section {
   max-width: 1350px;
-
   margin: 0 auto 45px;
-
   padding: 30px;
-
   background: white;
-
   border: 1px solid #e3e8e1;
-
   border-radius: 18px;
-
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 .section-title {
   display: flex;
-
   justify-content: space-between;
-
   align-items: center;
-
   gap: 20px;
-
   margin-bottom: 20px;
 }
 
 .section-title h2 {
   margin: 0 0 6px;
-
   color: #2f6b3b;
 }
 
 .section-title p {
   margin: 0;
-
   color: #666;
 }
 
 .record-count {
   padding: 8px 14px;
-
   background: #eef5ee;
-
   color: #2f6b3b;
-
   border-radius: 20px;
-
   font-size: 14px;
-
   font-weight: 700;
-
   white-space: nowrap;
 }
 
-/* =========================
-   Export
-========================= */
+/* Loading / error */
+
+.status-message {
+  margin-bottom: 20px;
+  color: #555;
+}
+
+.error-status {
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  background: #fce8e6;
+  color: #b42318;
+  border-radius: 8px;
+}
+
+/* Export */
 
 .export-actions {
   display: flex;
-
   gap: 12px;
-
   margin-bottom: 24px;
-
   flex-wrap: wrap;
 }
 
 .export-button {
   padding: 10px 18px;
-
   border: none;
-
   border-radius: 8px;
-
   background: #2f6b3b;
-
   color: white;
-
   font-family: inherit;
-
   font-weight: 700;
-
   cursor: pointer;
-
-  transition: 0.2s;
 }
 
 .export-button:hover {
   background: #25552f;
-
-  transform: translateY(-2px);
 }
 
 .pdf-button {
@@ -1117,97 +1207,67 @@ const exportVolunteersPDF = () => {
   background: #416748;
 }
 
-/* =========================
-   Controls
-========================= */
+/* Controls */
 
 .table-controls {
   display: flex;
-
   align-items: end;
-
   justify-content: space-between;
-
   gap: 20px;
-
   margin-bottom: 20px;
-
   flex-wrap: wrap;
 }
 
 .filter-grid {
   display: grid;
-
   grid-template-columns: repeat(3, minmax(0, 1fr));
-
   gap: 18px;
-
   margin-bottom: 24px;
 }
 
 .control-group {
   display: flex;
-
   flex-direction: column;
-
   gap: 7px;
 }
 
 .wide-control {
   min-width: 300px;
-
   flex: 1;
 }
 
 .control-group label {
   color: #263c2b;
-
   font-size: 14px;
-
   font-weight: 700;
 }
 
 .control-group input,
 .control-group select {
   width: 100%;
-
   padding: 11px 12px;
-
   font-family: inherit;
-
   font-size: 14px;
-
   background: white;
-
   border: 1px solid #ccd7ca;
-
   border-radius: 8px;
-
   outline: none;
 }
 
 .control-group input:focus,
 .control-group select:focus {
   border-color: #6f9f75;
-
   box-shadow: 0 0 0 3px rgba(111, 159, 117, 0.15);
 }
 
 .reset-button {
   padding: 11px 18px;
-
   border: 1px solid #b9cdb5;
-
   border-radius: 8px;
-
   background: white;
-
   color: #2f6b3b;
-
   font-family: inherit;
-
   font-weight: 700;
-
   cursor: pointer;
 }
 
@@ -1215,25 +1275,18 @@ const exportVolunteersPDF = () => {
   background: #f2f7f0;
 }
 
-/* =========================
-   Table
-========================= */
+/* Tables */
 
 .table-wrapper {
   width: 100%;
-
   overflow-x: auto;
-
   border: 1px solid #e1e7df;
-
   border-radius: 12px;
 }
 
 table {
   width: 100%;
-
   min-width: 900px;
-
   border-collapse: collapse;
 }
 
@@ -1244,23 +1297,18 @@ thead {
 th,
 td {
   padding: 14px;
-
   text-align: left;
-
   vertical-align: top;
-
   border-bottom: 1px solid #e5e9e4;
 }
 
 th {
   color: #2f4d34;
-
   font-size: 14px;
 }
 
 td {
   color: #444;
-
   font-size: 14px;
 }
 
@@ -1270,70 +1318,45 @@ tbody tr:hover {
 
 .sort-button {
   padding: 0;
-
   border: none;
-
   background: none;
-
   color: #2f4d34;
-
   font-family: inherit;
-
   font-size: 14px;
-
   font-weight: 700;
-
   cursor: pointer;
 }
 
-/* =========================
-   Badges / Actions
-========================= */
+/* Roles / actions */
 
 .role-badge {
   display: inline-block;
-
   padding: 5px 10px;
-
   border-radius: 20px;
-
   font-size: 13px;
-
   font-weight: 700;
-
   text-transform: capitalize;
 }
 
 .role-badge.user {
   background: #e8f3e7;
-
   color: #2f6b3b;
 }
 
 .role-badge.admin {
   background: #dbe8d7;
-
   color: #214f2d;
 }
 
 .delete-button {
   padding: 8px 14px;
-
   border: none;
-
   border-radius: 6px;
-
   background: #b42318;
-
   color: white;
-
   font-family: inherit;
-
   font-weight: 600;
-
   cursor: pointer;
-
-  transition: 0.2s;
 }
 
 .delete-button:hover {
@@ -1342,55 +1365,36 @@ tbody tr:hover {
 
 .protected-text {
   color: #777;
-
   font-size: 14px;
 }
 
 .empty-message {
   padding: 30px;
-
   text-align: center;
-
   color: #777;
 }
 
-/* =========================
-   Pagination
-========================= */
+/* Pagination */
 
 .pagination {
   display: flex;
-
   justify-content: center;
-
   align-items: center;
-
   gap: 20px;
-
   margin-top: 22px;
-
   flex-wrap: wrap;
-
   color: #555;
-
   font-size: 14px;
 }
 
 .page-button {
   padding: 9px 16px;
-
   border: none;
-
   border-radius: 7px;
-
   background: #2f6b3b;
-
   color: white;
-
   font-family: inherit;
-
   font-weight: 700;
-
   cursor: pointer;
 }
 
@@ -1400,23 +1404,17 @@ tbody tr:hover {
 
 .page-button:disabled {
   opacity: 0.4;
-
   cursor: not-allowed;
 }
 
 .rows-note {
   margin-top: 12px;
-
   text-align: center;
-
   color: #777;
-
   font-size: 13px;
 }
 
-/* =========================
-   Responsive
-========================= */
+/* Responsive */
 
 @media (max-width: 768px) {
   .admin-page {
@@ -1433,7 +1431,6 @@ tbody tr:hover {
 
   .section-title {
     flex-direction: column;
-
     align-items: flex-start;
   }
 
@@ -1443,7 +1440,6 @@ tbody tr:hover {
 
   .table-controls {
     flex-direction: column;
-
     align-items: stretch;
   }
 
@@ -1462,5 +1458,97 @@ tbody tr:hover {
   .export-button {
     width: 100%;
   }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* =========================
+   Dashboard Statistics
+========================= */
+
+.stats-section {
+  max-width: 1350px;
+
+  margin: 0 auto 45px;
+}
+
+.stats-grid {
+  display: grid;
+
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 20px;
+}
+
+.stat-card {
+  padding: 26px;
+
+  background: white;
+
+  border: 1px solid #e3e8e1;
+
+  border-top: 4px solid #7eb36a;
+
+  border-radius: 16px;
+
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+}
+
+.stat-label {
+  margin: 0 0 10px;
+
+  color: #7aa66d;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  letter-spacing: 1.8px;
+}
+
+.stat-value {
+  margin-bottom: 8px;
+
+  color: #2f6b3b;
+
+  font-size: 38px;
+
+  font-weight: 700;
+}
+
+.stat-small {
+  font-size: 18px;
+
+  font-weight: 600;
+}
+
+.stat-description {
+  margin: 0;
+
+  color: #666;
+
+  font-size: 14px;
+}
+
+.stats-message,
+.stats-error {
+  padding: 20px;
+
+  text-align: center;
+
+  background: white;
+
+  border-radius: 14px;
+}
+
+.stats-message {
+  color: #555;
+}
+
+.stats-error {
+  color: #b42318;
+
+  background: #fce8e6;
 }
 </style>

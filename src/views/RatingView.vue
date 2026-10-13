@@ -1,100 +1,254 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
+import { collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+
+import { onAuthStateChanged } from 'firebase/auth'
+
+import { auth, db } from '../firebase'
+
+/* =========================
+   Rating Form State
+========================= */
+
 const selectedRating = ref(0)
+
 const reviewText = ref('')
+
 const ratings = ref([])
+
 const successMessage = ref('')
 
-const loadRatings = () => {
-  ratings.value = JSON.parse(localStorage.getItem('ratings')) || []
+const errorMessage = ref('')
 
-  const currentUser = JSON.parse(localStorage.getItem('currentUser'))
+const isSubmitting = ref(false)
 
-  if (currentUser) {
-    const existingRating = ratings.value.find((rating) => rating.userId === currentUser.id)
+const isLoading = ref(true)
 
-    if (existingRating) {
-      selectedRating.value = existingRating.score
-      reviewText.value = existingRating.review
-    }
+const firebaseUser = ref(null)
+
+/* =========================
+   Format Firestore Date
+========================= */
+
+const formatDate = (timestamp) => {
+  if (!timestamp) {
+    return 'Just now'
+  }
+
+  try {
+    return timestamp.toDate().toLocaleDateString()
+  } catch {
+    return 'Just now'
   }
 }
 
-const submitRating = () => {
+/* =========================
+   Load All Ratings
+========================= */
+
+const loadRatings = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    const snapshot = await getDocs(collection(db, 'ratings'))
+
+    ratings.value = snapshot.docs.map((document) => {
+      const data = document.data()
+
+      return {
+        id: document.id,
+
+        userId: data.userId || '',
+
+        userName: data.userName || 'User',
+
+        score: Number(data.score) || 0,
+
+        review: data.review || '',
+
+        date: formatDate(data.updatedAt || data.createdAt),
+
+        createdAt: data.createdAt,
+
+        updatedAt: data.updatedAt,
+      }
+    })
+  } catch (error) {
+    console.error('Failed to load ratings:', error)
+
+    errorMessage.value = 'Unable to load ratings.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+/* =========================
+   Load Current User Rating
+========================= */
+
+const loadCurrentUserRating = async () => {
+  if (!firebaseUser.value) {
+    return
+  }
+
+  try {
+    const ratingDocument = await getDoc(doc(db, 'ratings', firebaseUser.value.uid))
+
+    if (ratingDocument.exists()) {
+      const data = ratingDocument.data()
+
+      selectedRating.value = Number(data.score) || 0
+
+      reviewText.value = data.review || ''
+    }
+  } catch (error) {
+    console.error('Failed to load current user rating:', error)
+  }
+}
+
+/* =========================
+   Submit / Update Rating
+========================= */
+
+const submitRating = async () => {
   successMessage.value = ''
   errorMessage.value = ''
 
-  const currentUser = JSON.parse(localStorage.getItem('currentUser'))
+  /* Must be logged in */
 
-  // Must be logged in
-  if (!currentUser) {
+  if (!firebaseUser.value) {
     errorMessage.value = 'Please log in before submitting a rating.'
+
     return
   }
 
-  // Rating must be between 1 and 5
+  /* Rating validation */
+
   if (selectedRating.value < 1 || selectedRating.value > 5) {
     errorMessage.value = 'Please select a rating between 1 and 5.'
+
     return
   }
 
-  // Remove unnecessary spaces
+  /* Clean review */
+
   const cleanReview = reviewText.value.trim()
 
-  // Maximum review length
+  /* Maximum length */
+
   if (cleanReview.length > 300) {
     errorMessage.value = 'Review must not exceed 300 characters.'
+
     return
   }
 
-  const existingIndex = ratings.value.findIndex((rating) => rating.userId === currentUser.id)
+  isSubmitting.value = true
 
-  const ratingData = {
-    id: existingIndex === -1 ? Date.now() : ratings.value[existingIndex].id,
+  try {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'))
 
-    userId: currentUser.id,
+    const userName = String(currentUser?.name || firebaseUser.value.displayName || 'User')
+      .trim()
+      .slice(0, 50)
 
-    userName: String(currentUser.name).trim().slice(0, 50),
+    const ratingReference = doc(db, 'ratings', firebaseUser.value.uid)
 
-    score: selectedRating.value,
+    const existingRating = await getDoc(ratingReference)
 
-    review: cleanReview.slice(0, 300),
+    /*
+      Use Firebase UID as document ID.
 
-    date: new Date().toLocaleDateString(),
+      This guarantees:
+      one user = one rating.
+    */
+
+    const ratingData = {
+      userId: firebaseUser.value.uid,
+
+      userName,
+
+      score: selectedRating.value,
+
+      review: cleanReview.slice(0, 300),
+
+      updatedAt: serverTimestamp(),
+    }
+
+    /*
+      Only create createdAt
+      for a new rating.
+    */
+
+    if (!existingRating.exists()) {
+      ratingData.createdAt = serverTimestamp()
+    }
+
+    /*
+      merge: true means an
+      existing rating is updated
+      instead of duplicated.
+    */
+
+    await setDoc(ratingReference, ratingData, {
+      merge: true,
+    })
+
+    if (existingRating.exists()) {
+      successMessage.value = 'Your rating has been updated.'
+    } else {
+      successMessage.value = 'Thank you for your feedback!'
+    }
+
+    /*
+      Reload ratings from
+      Firestore after submit.
+    */
+
+    await loadRatings()
+
+    selectedRating.value = 0
+
+    reviewText.value = ''
+  } catch (error) {
+    console.error('Rating submission failed:', error)
+
+    errorMessage.value = 'Unable to submit your rating. Please try again.'
+  } finally {
+    isSubmitting.value = false
   }
-
-  if (existingIndex === -1) {
-    ratings.value.push(ratingData)
-
-    successMessage.value = 'Thank you for your feedback!'
-  } else {
-    ratings.value[existingIndex] = ratingData
-
-    successMessage.value = 'Your rating has been updated.'
-  }
-
-  localStorage.setItem('ratings', JSON.stringify(ratings.value))
-
-  selectedRating.value = 0
-  reviewText.value = ''
 }
+
+/* =========================
+   Average Rating
+========================= */
 
 const averageRating = computed(() => {
   if (ratings.value.length === 0) {
     return 0
   }
 
-  const total = ratings.value.reduce((sum, rating) => sum + rating.score, 0)
+  const total = ratings.value.reduce((sum, rating) => sum + Number(rating.score), 0)
 
   return (total / ratings.value.length).toFixed(1)
 })
 
-onMounted(() => {
-  loadRatings()
-})
+/* =========================
+   Authentication + Initial Load
+========================= */
 
-const errorMessage = ref('')
+onMounted(() => {
+  onAuthStateChanged(auth, async (user) => {
+    firebaseUser.value = user
+
+    await loadRatings()
+
+    if (user) {
+      await loadCurrentUserRating()
+    }
+  })
+})
 </script>
 
 <template>
@@ -163,7 +317,9 @@ const errorMessage = ref('')
           <small> {{ reviewText.length }} / 300 </small>
         </div>
 
-        <button class="submit-button" @click="submitRating">Submit Rating</button>
+        <button class="submit-button" :disabled="isSubmitting" @click="submitRating">
+          {{ isSubmitting ? 'Submitting...' : 'Submit Rating' }}
+        </button>
         <div v-if="errorMessage" class="error-message">
           {{ errorMessage }}
         </div>
@@ -437,10 +593,14 @@ const errorMessage = ref('')
   transition: 0.2s;
 }
 
-.submit-button:hover {
+.submit-button:hover:not(:disabled) {
   background: #25552f;
-
   transform: translateY(-2px);
+}
+
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .success-message {
