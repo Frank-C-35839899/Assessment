@@ -81,6 +81,8 @@ onMounted(() => {
 
       <router-link to="/about" @click="closeMenu"> About Us </router-link>
 
+      <router-link to="/map" @click="closeMenu"> Community Map </router-link>
+
       <router-link to="/rating" @click="closeMenu"> Webpage Rating </router-link>
 
       <!-- Not logged in -->

@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-
 import HomeView from '../views/HomeView.vue'
 import UrbanGreeningView from '../views/UrbanGreeningView.vue'
 import TreePlantingView from '../views/TreePlantingView.vue'
@@ -16,6 +15,7 @@ import LoginView from '../views/LoginView.vue'
 import AdminView from '../views/AdminView.vue'
 import RatingView from '../views/RatingView.vue'
 import CityGalleryView from '../views/CityGalleryView.vue'
+import MapView from '../views/MapView.vue'
 
 const routes = [
   {
@@ -100,6 +100,11 @@ const routes = [
     path: '/urban-greening/:city',
     name: 'CityGallery',
     component: CityGalleryView,
+  },
+  {
+    path: '/map',
+    name: 'Map',
+    component: MapView,
   },
 ]
 

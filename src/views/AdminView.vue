@@ -1,23 +1,34 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { db, functions } from '../firebase'
+
 import { httpsCallable } from 'firebase/functions'
 
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+
+import { db, functions } from '../firebase'
+
 /* =========================
-   Data
+   Firestore Data
 ========================= */
 
 const users = ref([])
+
 const volunteers = ref([])
 
 const loadingUsers = ref(false)
+
 const loadingVolunteers = ref(false)
 
 const userLoadError = ref('')
+
 const volunteerLoadError = ref('')
+
+/* =========================
+   Dashboard Statistics
+========================= */
 
 const dashboardStats = ref({
   totalUsers: 0,
@@ -27,10 +38,124 @@ const dashboardStats = ref({
 })
 
 const loadingStats = ref(false)
+
 const statsError = ref('')
+
+/* =========================
+   Email Form
+========================= */
+
+const emailForm = ref({
+  to: '',
+  subject: '',
+  message: '',
+})
+
+const selectedAttachment = ref(null)
+
+const emailSending = ref(false)
+
+const emailSuccess = ref('')
+
+const emailError = ref('')
+
+/* =========================
+   User Filters
+========================= */
+
+const userGlobalSearch = ref('')
+
+const userNameFilter = ref('')
+
+const userEmailFilter = ref('')
+
+const userRoleFilter = ref('')
+
+const userSortField = ref('')
+
+const userSortDirection = ref('asc')
+
+const userCurrentPage = ref(1)
+
+const userRowsPerPage = 10
+
+/* =========================
+   Volunteer Filters
+========================= */
+
+const volunteerGlobalSearch = ref('')
+
+const volunteerNameFilter = ref('')
+
+const volunteerEmailFilter = ref('')
+
+const volunteerActivityFilter = ref('')
+
+const volunteerSortField = ref('')
+
+const volunteerSortDirection = ref('asc')
+
+const volunteerCurrentPage = ref(1)
+
+const volunteerRowsPerPage = 10
+
+/* =========================
+   Load Firestore Users
+========================= */
+
+const loadUsers = async () => {
+  loadingUsers.value = true
+
+  userLoadError.value = ''
+
+  try {
+    const snapshot = await getDocs(collection(db, 'users'))
+
+    users.value = snapshot.docs.map((document) => ({
+      id: document.id,
+      ...document.data(),
+    }))
+  } catch (error) {
+    console.error('Failed to load users:', error)
+
+    userLoadError.value = 'Unable to load registered users.'
+  } finally {
+    loadingUsers.value = false
+  }
+}
+
+/* =========================
+   Load Volunteers
+========================= */
+
+const loadVolunteers = async () => {
+  loadingVolunteers.value = true
+
+  volunteerLoadError.value = ''
+
+  try {
+    const snapshot = await getDocs(collection(db, 'volunteers'))
+
+    volunteers.value = snapshot.docs.map((document) => ({
+      id: document.id,
+      ...document.data(),
+    }))
+  } catch (error) {
+    console.error('Failed to load volunteers:', error)
+
+    volunteerLoadError.value = 'Unable to load volunteer applications.'
+  } finally {
+    loadingVolunteers.value = false
+  }
+}
+
+/* =========================
+   Load Dashboard Stats
+========================= */
 
 const loadDashboardStats = async () => {
   loadingStats.value = true
+
   statsError.value = ''
 
   try {
@@ -53,83 +178,6 @@ const loadDashboardStats = async () => {
     statsError.value = 'Unable to load dashboard statistics.'
   } finally {
     loadingStats.value = false
-  }
-}
-/* =========================
-   User Filters
-========================= */
-
-const userGlobalSearch = ref('')
-const userNameFilter = ref('')
-const userEmailFilter = ref('')
-const userRoleFilter = ref('')
-
-const userSortField = ref('')
-const userSortDirection = ref('asc')
-
-const userCurrentPage = ref(1)
-const userRowsPerPage = 10
-
-/* =========================
-   Volunteer Filters
-========================= */
-
-const volunteerGlobalSearch = ref('')
-const volunteerNameFilter = ref('')
-const volunteerEmailFilter = ref('')
-const volunteerActivityFilter = ref('')
-
-const volunteerSortField = ref('')
-const volunteerSortDirection = ref('asc')
-
-const volunteerCurrentPage = ref(1)
-const volunteerRowsPerPage = 10
-
-/* =========================
-   Load Firestore Users
-========================= */
-
-const loadUsers = async () => {
-  loadingUsers.value = true
-  userLoadError.value = ''
-
-  try {
-    const snapshot = await getDocs(collection(db, 'users'))
-
-    users.value = snapshot.docs.map((document) => ({
-      id: document.id,
-      ...document.data(),
-    }))
-  } catch (error) {
-    console.error('Failed to load users:', error)
-
-    userLoadError.value = 'Unable to load registered users.'
-  } finally {
-    loadingUsers.value = false
-  }
-}
-
-/* =========================
-   Load Firestore Volunteers
-========================= */
-
-const loadVolunteers = async () => {
-  loadingVolunteers.value = true
-  volunteerLoadError.value = ''
-
-  try {
-    const snapshot = await getDocs(collection(db, 'volunteers'))
-
-    volunteers.value = snapshot.docs.map((document) => ({
-      id: document.id,
-      ...document.data(),
-    }))
-  } catch (error) {
-    console.error('Failed to load volunteers:', error)
-
-    volunteerLoadError.value = 'Unable to load volunteer applications.'
-  } finally {
-    loadingVolunteers.value = false
   }
 }
 
@@ -161,9 +209,7 @@ const deleteUser = async (user) => {
 
     users.value = users.value.filter((item) => item.id !== user.id)
 
-    if (userCurrentPage.value > userTotalPages.value) {
-      userCurrentPage.value = Math.max(1, userTotalPages.value)
-    }
+    await loadDashboardStats()
   } catch (error) {
     console.error('Failed to delete user:', error)
 
@@ -187,9 +233,7 @@ const deleteVolunteer = async (volunteer) => {
 
     volunteers.value = volunteers.value.filter((item) => item.id !== volunteer.id)
 
-    if (volunteerCurrentPage.value > volunteerTotalPages.value) {
-      volunteerCurrentPage.value = Math.max(1, volunteerTotalPages.value)
-    }
+    await loadDashboardStats()
   } catch (error) {
     console.error('Failed to delete volunteer:', error)
 
@@ -262,6 +306,7 @@ const sortUsers = (field) => {
     userSortDirection.value = userSortDirection.value === 'asc' ? 'desc' : 'asc'
   } else {
     userSortField.value = field
+
     userSortDirection.value = 'asc'
   }
 }
@@ -285,9 +330,7 @@ const userTotalPages = computed(() => {
 const paginatedUsers = computed(() => {
   const start = (userCurrentPage.value - 1) * userRowsPerPage
 
-  const end = start + userRowsPerPage
-
-  return filteredUsers.value.slice(start, end)
+  return filteredUsers.value.slice(start, start + userRowsPerPage)
 })
 
 const previousUserPage = () => {
@@ -308,9 +351,13 @@ const nextUserPage = () => {
 
 const resetUserFilters = () => {
   userGlobalSearch.value = ''
+
   userNameFilter.value = ''
+
   userEmailFilter.value = ''
+
   userRoleFilter.value = ''
+
   userCurrentPage.value = 1
 }
 
@@ -334,20 +381,20 @@ const filteredVolunteers = computed(() => {
 
     const volunteerActivity = String(volunteer.activity || '').toLowerCase()
 
-    const volunteerAvailability = String(volunteer.availability || '').toLowerCase()
+    const availability = String(volunteer.availability || '').toLowerCase()
 
-    const volunteerExperience = String(volunteer.experience || '').toLowerCase()
+    const experience = String(volunteer.experience || '').toLowerCase()
 
-    const volunteerReason = String(volunteer.reason || '').toLowerCase()
+    const reason = String(volunteer.reason || '').toLowerCase()
 
     const matchesGlobal =
       !global ||
       volunteerName.includes(global) ||
       volunteerEmail.includes(global) ||
       volunteerActivity.includes(global) ||
-      volunteerAvailability.includes(global) ||
-      volunteerExperience.includes(global) ||
-      volunteerReason.includes(global)
+      availability.includes(global) ||
+      experience.includes(global) ||
+      reason.includes(global)
 
     const matchesName = !name || volunteerName.includes(name)
 
@@ -412,9 +459,7 @@ const volunteerTotalPages = computed(() => {
 const paginatedVolunteers = computed(() => {
   const start = (volunteerCurrentPage.value - 1) * volunteerRowsPerPage
 
-  const end = start + volunteerRowsPerPage
-
-  return filteredVolunteers.value.slice(start, end)
+  return filteredVolunteers.value.slice(start, start + volunteerRowsPerPage)
 })
 
 const previousVolunteerPage = () => {
@@ -446,15 +491,13 @@ const resetVolunteerFilters = () => {
 }
 
 /* =========================
-   CSV Helpers
+   CSV Helper
 ========================= */
 
 const escapeCSV = (value) => {
   const text = String(value ?? '')
 
-  const escaped = text.replace(/"/g, '""')
-
-  return `"${escaped}"`
+  return `"${text.replace(/"/g, '""')}"`
 }
 
 const downloadCSV = (rows, headers, filename) => {
@@ -463,14 +506,10 @@ const downloadCSV = (rows, headers, filename) => {
   csvRows.push(headers.map((header) => escapeCSV(header.label)).join(','))
 
   rows.forEach((row) => {
-    const values = headers.map((header) => escapeCSV(row[header.key]))
-
-    csvRows.push(values.join(','))
+    csvRows.push(headers.map((header) => escapeCSV(row[header.key])).join(','))
   })
 
-  const csvContent = csvRows.join('\n')
-
-  const blob = new Blob([csvContent], {
+  const blob = new Blob([csvRows.join('\n')], {
     type: 'text/csv;charset=utf-8;',
   })
 
@@ -479,6 +518,7 @@ const downloadCSV = (rows, headers, filename) => {
   const link = document.createElement('a')
 
   link.href = url
+
   link.download = filename
 
   document.body.appendChild(link)
@@ -495,22 +535,24 @@ const downloadCSV = (rows, headers, filename) => {
 ========================= */
 
 const exportUsersCSV = () => {
-  const headers = [
-    {
-      label: 'Name',
-      key: 'name',
-    },
-    {
-      label: 'Email',
-      key: 'email',
-    },
-    {
-      label: 'Role',
-      key: 'role',
-    },
-  ]
-
-  downloadCSV(filteredUsers.value, headers, 'urban-canopy-users.csv')
+  downloadCSV(
+    filteredUsers.value,
+    [
+      {
+        label: 'Name',
+        key: 'name',
+      },
+      {
+        label: 'Email',
+        key: 'email',
+      },
+      {
+        label: 'Role',
+        key: 'role',
+      },
+    ],
+    'urban-canopy-users.csv',
+  )
 }
 
 /* =========================
@@ -518,34 +560,36 @@ const exportUsersCSV = () => {
 ========================= */
 
 const exportVolunteersCSV = () => {
-  const headers = [
-    {
-      label: 'Name',
-      key: 'name',
-    },
-    {
-      label: 'Email',
-      key: 'email',
-    },
-    {
-      label: 'Activity',
-      key: 'activity',
-    },
-    {
-      label: 'Availability',
-      key: 'availability',
-    },
-    {
-      label: 'Experience',
-      key: 'experience',
-    },
-    {
-      label: 'Reason',
-      key: 'reason',
-    },
-  ]
-
-  downloadCSV(filteredVolunteers.value, headers, 'urban-canopy-volunteers.csv')
+  downloadCSV(
+    filteredVolunteers.value,
+    [
+      {
+        label: 'Name',
+        key: 'name',
+      },
+      {
+        label: 'Email',
+        key: 'email',
+      },
+      {
+        label: 'Activity',
+        key: 'activity',
+      },
+      {
+        label: 'Availability',
+        key: 'availability',
+      },
+      {
+        label: 'Experience',
+        key: 'experience',
+      },
+      {
+        label: 'Reason',
+        key: 'reason',
+      },
+    ],
+    'urban-canopy-volunteers.csv',
+  )
 }
 
 /* =========================
@@ -559,10 +603,6 @@ const exportUsersPDF = () => {
 
   pdf.text('Urban Canopy - Registered Users', 14, 20)
 
-  pdf.setFontSize(10)
-
-  pdf.text(`Total records: ${filteredUsers.value.length}`, 14, 28)
-
   const rows = filteredUsers.value.map((user) => [
     user.name || '',
     user.email || '',
@@ -570,15 +610,11 @@ const exportUsersPDF = () => {
   ])
 
   autoTable(pdf, {
-    startY: 35,
+    startY: 30,
 
     head: [['Name', 'Email', 'Role']],
 
     body: rows,
-
-    styles: {
-      fontSize: 9,
-    },
 
     headStyles: {
       fillColor: [47, 107, 59],
@@ -601,10 +637,6 @@ const exportVolunteersPDF = () => {
 
   pdf.text('Urban Canopy - Volunteer Applications', 14, 20)
 
-  pdf.setFontSize(10)
-
-  pdf.text(`Total records: ${filteredVolunteers.value.length}`, 14, 28)
-
   const rows = filteredVolunteers.value.map((volunteer) => [
     volunteer.name || '',
     volunteer.email || '',
@@ -615,7 +647,7 @@ const exportVolunteersPDF = () => {
   ])
 
   autoTable(pdf, {
-    startY: 35,
+    startY: 30,
 
     head: [['Name', 'Email', 'Activity', 'Availability', 'Experience', 'Reason']],
 
@@ -623,29 +655,174 @@ const exportVolunteersPDF = () => {
 
     styles: {
       fontSize: 8,
-      cellPadding: 3,
     },
 
     headStyles: {
       fillColor: [47, 107, 59],
     },
-
-    columnStyles: {
-      4: {
-        cellWidth: 45,
-      },
-      5: {
-        cellWidth: 55,
-      },
-    },
   })
 
   pdf.save('urban-canopy-volunteers.pdf')
+}
+
+/* =========================
+   Attachment Selection
+========================= */
+
+const handleAttachment = (event) => {
+  emailError.value = ''
+
+  emailSuccess.value = ''
+
+  const file = event.target.files[0]
+
+  if (!file) {
+    selectedAttachment.value = null
+
+    return
+  }
+
+  const maxFileSize = 5 * 1024 * 1024
+
+  if (file.size > maxFileSize) {
+    emailError.value = 'Attachment must not exceed 5 MB.'
+
+    event.target.value = ''
+
+    selectedAttachment.value = null
+
+    return
+  }
+
+  selectedAttachment.value = file
+}
+
+/* =========================
+   File → Base64
+========================= */
+
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = () => {
+      const result = String(reader.result)
+
+      const base64 = result.split(',')[1]
+
+      resolve(base64)
+    }
+
+    reader.onerror = () => {
+      reject(new Error('Unable to read attachment.'))
+    }
+
+    reader.readAsDataURL(file)
+  })
+}
+
+/* =========================
+   Send Email
+========================= */
+
+const sendEmail = async () => {
+  emailSuccess.value = ''
+
+  emailError.value = ''
+
+  const to = emailForm.value.to.trim()
+
+  const subject = emailForm.value.subject.trim()
+
+  const message = emailForm.value.message.trim()
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  if (!emailPattern.test(to)) {
+    emailError.value = 'Please enter a valid recipient email address.'
+
+    return
+  }
+
+  if (subject.length < 1 || subject.length > 150) {
+    emailError.value = 'Subject must be between 1 and 150 characters.'
+
+    return
+  }
+
+  if (message.length < 1 || message.length > 5000) {
+    emailError.value = 'Message must be between 1 and 5000 characters.'
+
+    return
+  }
+
+  emailSending.value = true
+
+  try {
+    let attachmentData = null
+
+    if (selectedAttachment.value) {
+      const base64 = await fileToBase64(selectedAttachment.value)
+
+      attachmentData = {
+        filename: selectedAttachment.value.name,
+
+        content: base64,
+
+        contentType: selectedAttachment.value.type || 'application/octet-stream',
+      }
+    }
+
+    const sendAdminEmail = httpsCallable(functions, 'sendAdminEmail')
+
+    const result = await sendAdminEmail({
+      to,
+      subject,
+      message,
+      attachment: attachmentData,
+    })
+
+    if (result.data.success) {
+      emailSuccess.value = 'Email sent successfully.'
+
+      emailForm.value = {
+        to: '',
+        subject: '',
+        message: '',
+      }
+
+      selectedAttachment.value = null
+
+      const fileInput = document.getElementById('email-attachment')
+
+      if (fileInput) {
+        fileInput.value = ''
+      }
+    } else {
+      emailError.value = 'Email could not be sent.'
+    }
+  } catch (error) {
+    console.error('Email send failed:', error)
+
+    if (error.code === 'functions/unauthenticated') {
+      emailError.value = 'You must be logged in.'
+    } else if (error.code === 'functions/permission-denied') {
+      emailError.value = 'Only administrators can send email.'
+    } else {
+      emailError.value = error.message || 'Unable to send email.'
+    }
+  } finally {
+    emailSending.value = false
+  }
 }
 </script>
 
 <template>
   <div class="admin-page">
+    <!-- =========================
+         Header
+    ========================== -->
+
     <div class="page-header">
       <p class="page-tag">ADMINISTRATION</p>
 
@@ -659,7 +836,10 @@ const exportVolunteersPDF = () => {
       </p>
     </div>
 
-    <!-- Dashboard Statistics -->
+    <!-- =========================
+         Dashboard Statistics
+    ========================== -->
+
     <section class="stats-section">
       <div v-if="loadingStats" class="stats-message">Loading dashboard statistics...</div>
 
@@ -703,11 +883,114 @@ const exportVolunteersPDF = () => {
 
           <div class="stat-value">
             {{ dashboardStats.averageRating }}
+
             <span class="stat-small"> / 5 </span>
           </div>
 
           <p class="stat-description">Average community score</p>
         </div>
+      </div>
+    </section>
+
+    <!-- =========================
+         Send Email
+    ========================== -->
+
+    <section class="admin-section email-section">
+      <div class="section-title">
+        <div>
+          <h2>Send Email</h2>
+
+          <p>Send notifications and documents to Urban Canopy community members.</p>
+        </div>
+      </div>
+
+      <div class="email-form">
+        <div class="email-field">
+          <label for="email-to"> Recipient Email </label>
+
+          <input
+            id="email-to"
+            v-model="emailForm.to"
+            type="email"
+            placeholder="example@gmail.com"
+          />
+        </div>
+
+        <div class="email-field">
+          <label for="email-subject"> Subject </label>
+
+          <input
+            id="email-subject"
+            v-model="emailForm.subject"
+            type="text"
+            maxlength="150"
+            placeholder="Enter email subject"
+          />
+
+          <small>
+            {{ emailForm.subject.length }}
+            / 150
+          </small>
+        </div>
+
+        <div class="email-field">
+          <label for="email-message"> Message </label>
+
+          <textarea
+            id="email-message"
+            v-model="emailForm.message"
+            rows="7"
+            maxlength="5000"
+            placeholder="Write your message..."
+          ></textarea>
+
+          <small>
+            {{ emailForm.message.length }}
+            / 5000
+          </small>
+        </div>
+
+        <div class="email-field">
+          <label for="email-attachment"> Attachment </label>
+
+          <div class="custom-file-upload">
+            <label for="email-attachment" class="file-button"> Choose File </label>
+
+            <span class="file-name">
+              {{ selectedAttachment ? selectedAttachment.name : 'No file chosen' }}
+            </span>
+
+            <input
+              id="email-attachment"
+              class="hidden-file-input"
+              type="file"
+              @change="handleAttachment"
+            />
+          </div>
+
+          <small> Optional. Maximum file size: 5 MB. </small>
+
+          <div v-if="selectedAttachment" class="selected-file">
+            Selected:
+            {{ selectedAttachment.name }}
+
+            ({{ (selectedAttachment.size / 1024 / 1024).toFixed(2) }}
+            MB)
+          </div>
+        </div>
+
+        <div v-if="emailError" class="email-error">
+          {{ emailError }}
+        </div>
+
+        <div v-if="emailSuccess" class="email-success">
+          {{ emailSuccess }}
+        </div>
+
+        <button type="button" class="send-email-button" :disabled="emailSending" @click="sendEmail">
+          {{ emailSending ? 'Sending...' : 'Send Email' }}
+        </button>
       </div>
     </section>
 
@@ -725,7 +1008,6 @@ const exportVolunteersPDF = () => {
 
         <div class="record-count">
           {{ filteredUsers.length }}
-
           result<span v-if="filteredUsers.length !== 1"> s </span>
         </div>
       </div>
@@ -739,15 +1021,14 @@ const exportVolunteersPDF = () => {
       <div class="export-actions">
         <button class="export-button" @click="exportUsersCSV">Export CSV</button>
 
-        <button class="export-button pdf-button" @click="exportUsersPDF">Export PDF</button>
+        <button class="export-button" @click="exportUsersPDF">Export PDF</button>
       </div>
 
       <div class="table-controls">
         <div class="control-group wide-control">
-          <label for="user-global-search"> Global Search </label>
+          <label> Global Search </label>
 
           <input
-            id="user-global-search"
             v-model="userGlobalSearch"
             type="text"
             placeholder="Search name, email or role..."
@@ -760,10 +1041,9 @@ const exportVolunteersPDF = () => {
 
       <div class="filter-grid">
         <div class="control-group">
-          <label for="user-name-filter"> Name </label>
+          <label> Name </label>
 
           <input
-            id="user-name-filter"
             v-model="userNameFilter"
             type="text"
             placeholder="Search name"
@@ -772,10 +1052,9 @@ const exportVolunteersPDF = () => {
         </div>
 
         <div class="control-group">
-          <label for="user-email-filter"> Email </label>
+          <label> Email </label>
 
           <input
-            id="user-email-filter"
             v-model="userEmailFilter"
             type="text"
             placeholder="Search email"
@@ -784,9 +1063,9 @@ const exportVolunteersPDF = () => {
         </div>
 
         <div class="control-group">
-          <label for="user-role-filter"> Role </label>
+          <label> Role </label>
 
-          <select id="user-role-filter" v-model="userRoleFilter" @change="userCurrentPage = 1">
+          <select v-model="userRoleFilter" @change="userCurrentPage = 1">
             <option value="">All Roles</option>
 
             <option value="user">User</option>
@@ -913,15 +1192,14 @@ const exportVolunteersPDF = () => {
       <div class="export-actions">
         <button class="export-button" @click="exportVolunteersCSV">Export CSV</button>
 
-        <button class="export-button pdf-button" @click="exportVolunteersPDF">Export PDF</button>
+        <button class="export-button" @click="exportVolunteersPDF">Export PDF</button>
       </div>
 
       <div class="table-controls">
         <div class="control-group wide-control">
-          <label for="volunteer-global-search"> Global Search </label>
+          <label> Global Search </label>
 
           <input
-            id="volunteer-global-search"
             v-model="volunteerGlobalSearch"
             type="text"
             placeholder="Search all application fields..."
@@ -934,10 +1212,9 @@ const exportVolunteersPDF = () => {
 
       <div class="filter-grid">
         <div class="control-group">
-          <label for="volunteer-name-filter"> Name </label>
+          <label> Name </label>
 
           <input
-            id="volunteer-name-filter"
             v-model="volunteerNameFilter"
             type="text"
             placeholder="Search name"
@@ -946,10 +1223,9 @@ const exportVolunteersPDF = () => {
         </div>
 
         <div class="control-group">
-          <label for="volunteer-email-filter"> Email </label>
+          <label> Email </label>
 
           <input
-            id="volunteer-email-filter"
             v-model="volunteerEmailFilter"
             type="text"
             placeholder="Search email"
@@ -958,10 +1234,9 @@ const exportVolunteersPDF = () => {
         </div>
 
         <div class="control-group">
-          <label for="volunteer-activity-filter"> Activity </label>
+          <label> Activity </label>
 
           <input
-            id="volunteer-activity-filter"
             v-model="volunteerActivityFilter"
             type="text"
             placeholder="Search activity"
@@ -1085,10 +1360,12 @@ const exportVolunteersPDF = () => {
   background: #f7faf5;
 }
 
-/* Header */
+/* =========================
+   Header
+========================= */
 
 .page-header {
-  max-width: 850px;
+  max-width: 900px;
   margin: 0 auto 50px;
   text-align: center;
 }
@@ -1120,7 +1397,71 @@ const exportVolunteersPDF = () => {
   line-height: 1.7;
 }
 
-/* Sections */
+/* =========================
+   Statistics
+========================= */
+
+.stats-section {
+  max-width: 1350px;
+  margin: 0 auto 45px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  padding: 26px;
+  background: white;
+  border: 1px solid #e3e8e1;
+  border-top: 4px solid #7eb36a;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+}
+
+.stat-label {
+  margin: 0 0 10px;
+  color: #7aa66d;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+}
+
+.stat-value {
+  margin-bottom: 8px;
+  color: #2f6b3b;
+  font-size: 38px;
+  font-weight: 700;
+}
+
+.stat-small {
+  font-size: 18px;
+}
+
+.stat-description {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.stats-message,
+.stats-error {
+  padding: 20px;
+  text-align: center;
+  background: white;
+  border-radius: 14px;
+}
+
+.stats-error {
+  color: #b42318;
+  background: #fce8e6;
+}
+
+/* =========================
+   Sections
+========================= */
 
 .admin-section {
   max-width: 1350px;
@@ -1137,7 +1478,7 @@ const exportVolunteersPDF = () => {
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
 }
 
 .section-title h2 {
@@ -1157,31 +1498,111 @@ const exportVolunteersPDF = () => {
   border-radius: 20px;
   font-size: 14px;
   font-weight: 700;
-  white-space: nowrap;
 }
 
-/* Loading / error */
+/* =========================
+   Email
+========================= */
 
-.status-message {
-  margin-bottom: 20px;
-  color: #555;
+.email-form {
+  max-width: 800px;
 }
 
-.error-status {
-  margin-bottom: 20px;
+.email-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 22px;
+}
+
+.email-field label {
+  margin-bottom: 8px;
+  color: #263c2b;
+  font-weight: 700;
+}
+
+.email-field input,
+.email-field textarea {
+  width: 100%;
   padding: 12px 14px;
-  background: #fce8e6;
-  color: #b42318;
+  font-family: inherit;
+  font-size: 15px;
+  border: 1px solid #ccd7ca;
+  border-radius: 8px;
+  outline: none;
+}
+
+.email-field input:focus,
+.email-field textarea:focus {
+  border-color: #6f9f75;
+  box-shadow: 0 0 0 3px rgba(111, 159, 117, 0.15);
+}
+
+.email-field textarea {
+  resize: vertical;
+}
+
+.email-field small {
+  margin-top: 7px;
+  color: #777;
+  font-size: 12px;
+  text-align: right;
+}
+
+.selected-file {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #eef5ee;
+  color: #2f6b3b;
+  border-radius: 7px;
+  font-size: 14px;
+}
+
+.send-email-button {
+  padding: 13px 24px;
+  border: none;
+  border-radius: 8px;
+  background: #2f6b3b;
+  color: white;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.send-email-button:hover:not(:disabled) {
+  background: #25552f;
+}
+
+.send-email-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.email-success {
+  margin-bottom: 18px;
+  padding: 14px;
+  background: #e7f3e8;
+  color: #2f6b3b;
   border-radius: 8px;
 }
 
-/* Export */
+.email-error {
+  margin-bottom: 18px;
+  padding: 14px;
+  background: #fdecec;
+  color: #b42318;
+  border: 1px solid #f3c7c4;
+  border-radius: 8px;
+}
+
+/* =========================
+   Controls
+========================= */
 
 .export-actions {
   display: flex;
   gap: 12px;
   margin-bottom: 24px;
-  flex-wrap: wrap;
 }
 
 .export-button {
@@ -1190,37 +1611,20 @@ const exportVolunteersPDF = () => {
   border-radius: 8px;
   background: #2f6b3b;
   color: white;
-  font-family: inherit;
   font-weight: 700;
   cursor: pointer;
 }
 
-.export-button:hover {
-  background: #25552f;
-}
-
-.pdf-button {
-  background: #527c59;
-}
-
-.pdf-button:hover {
-  background: #416748;
-}
-
-/* Controls */
-
 .table-controls {
   display: flex;
   align-items: end;
-  justify-content: space-between;
   gap: 20px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
 }
 
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 18px;
   margin-bottom: 24px;
 }
@@ -1232,7 +1636,6 @@ const exportVolunteersPDF = () => {
 }
 
 .wide-control {
-  min-width: 300px;
   flex: 1;
 }
 
@@ -1246,18 +1649,8 @@ const exportVolunteersPDF = () => {
 .control-group select {
   width: 100%;
   padding: 11px 12px;
-  font-family: inherit;
-  font-size: 14px;
-  background: white;
   border: 1px solid #ccd7ca;
   border-radius: 8px;
-  outline: none;
-}
-
-.control-group input:focus,
-.control-group select:focus {
-  border-color: #6f9f75;
-  box-shadow: 0 0 0 3px rgba(111, 159, 117, 0.15);
 }
 
 .reset-button {
@@ -1266,19 +1659,15 @@ const exportVolunteersPDF = () => {
   border-radius: 8px;
   background: white;
   color: #2f6b3b;
-  font-family: inherit;
   font-weight: 700;
   cursor: pointer;
 }
 
-.reset-button:hover {
-  background: #f2f7f0;
-}
-
-/* Tables */
+/* =========================
+   Table
+========================= */
 
 .table-wrapper {
-  width: 100%;
   overflow-x: auto;
   border: 1px solid #e1e7df;
   border-radius: 12px;
@@ -1302,40 +1691,18 @@ td {
   border-bottom: 1px solid #e5e9e4;
 }
 
-th {
-  color: #2f4d34;
-  font-size: 14px;
-}
-
-td {
-  color: #444;
-  font-size: 14px;
-}
-
-tbody tr:hover {
-  background: #f8fbf6;
-}
-
 .sort-button {
-  padding: 0;
   border: none;
   background: none;
   color: #2f4d34;
-  font-family: inherit;
-  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
 
-/* Roles / actions */
-
 .role-badge {
-  display: inline-block;
   padding: 5px 10px;
   border-radius: 20px;
-  font-size: 13px;
   font-weight: 700;
-  text-transform: capitalize;
 }
 
 .role-badge.user {
@@ -1354,18 +1721,11 @@ tbody tr:hover {
   border-radius: 6px;
   background: #b42318;
   color: white;
-  font-family: inherit;
-  font-weight: 600;
   cursor: pointer;
-}
-
-.delete-button:hover {
-  background: #8f1c13;
 }
 
 .protected-text {
   color: #777;
-  font-size: 14px;
 }
 
 .empty-message {
@@ -1374,7 +1734,9 @@ tbody tr:hover {
   color: #777;
 }
 
-/* Pagination */
+/* =========================
+   Pagination
+========================= */
 
 .pagination {
   display: flex;
@@ -1382,9 +1744,6 @@ tbody tr:hover {
   align-items: center;
   gap: 20px;
   margin-top: 22px;
-  flex-wrap: wrap;
-  color: #555;
-  font-size: 14px;
 }
 
 .page-button {
@@ -1393,13 +1752,8 @@ tbody tr:hover {
   border-radius: 7px;
   background: #2f6b3b;
   color: white;
-  font-family: inherit;
   font-weight: 700;
   cursor: pointer;
-}
-
-.page-button:hover:not(:disabled) {
-  background: #25552f;
 }
 
 .page-button:disabled {
@@ -1414,7 +1768,26 @@ tbody tr:hover {
   font-size: 13px;
 }
 
-/* Responsive */
+.status-message {
+  color: #555;
+}
+
+.error-status {
+  padding: 12px;
+  color: #b42318;
+  background: #fdecec;
+  border-radius: 8px;
+}
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 
 @media (max-width: 768px) {
   .admin-page {
@@ -1423,6 +1796,10 @@ tbody tr:hover {
 
   .page-header h1 {
     font-size: 36px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 
   .admin-section {
@@ -1443,112 +1820,56 @@ tbody tr:hover {
     align-items: stretch;
   }
 
-  .wide-control {
-    min-width: 0;
-  }
-
-  .reset-button {
-    width: 100%;
-  }
-
   .export-actions {
     flex-direction: column;
   }
 
-  .export-button {
+  .export-button,
+  .reset-button,
+  .send-email-button {
     width: 100%;
   }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
 }
-/* =========================
-   Dashboard Statistics
-========================= */
-
-.stats-section {
-  max-width: 1350px;
-
-  margin: 0 auto 45px;
+.hidden-file-input {
+  display: none;
 }
 
-.stats-grid {
-  display: grid;
+.custom-file-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 12px 14px;
 
-  gap: 20px;
-}
-
-.stat-card {
-  padding: 26px;
+  border: 1px solid #ccd7ca;
+  border-radius: 8px;
 
   background: white;
-
-  border: 1px solid #e3e8e1;
-
-  border-top: 4px solid #7eb36a;
-
-  border-radius: 16px;
-
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
 }
 
-.stat-label {
-  margin: 0 0 10px;
+.file-button {
+  padding: 8px 14px;
 
-  color: #7aa66d;
+  background: #f2f4f1;
 
-  font-size: 12px;
+  color: #333;
 
-  font-weight: 700;
-
-  letter-spacing: 1.8px;
-}
-
-.stat-value {
-  margin-bottom: 8px;
-
-  color: #2f6b3b;
-
-  font-size: 38px;
-
-  font-weight: 700;
-}
-
-.stat-small {
-  font-size: 18px;
+  border: 1px solid #bfc8bd;
+  border-radius: 6px;
 
   font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s;
 }
 
-.stat-description {
-  margin: 0;
-
-  color: #666;
-
-  font-size: 14px;
+.file-button:hover {
+  background: #e8ece6;
 }
 
-.stats-message,
-.stats-error {
-  padding: 20px;
-
-  text-align: center;
-
-  background: white;
-
-  border-radius: 14px;
-}
-
-.stats-message {
+.file-name {
   color: #555;
-}
-
-.stats-error {
-  color: #b42318;
-
-  background: #fce8e6;
+  font-size: 14px;
 }
 </style>
