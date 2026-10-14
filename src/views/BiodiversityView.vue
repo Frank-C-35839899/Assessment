@@ -1,7 +1,11 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 const selectedSpecies = ref(null)
+const speciesModal = ref(null)
+const lastFocusedElement = ref(null)
+const speciesSearch = ref('')
+const selectedSpeciesCategory = ref('all')
 
 const selectedFoodLevel = ref('producer')
 
@@ -127,6 +131,124 @@ const speciesData = {
   },
 }
 
+const urbanSpeciesList = [
+  {
+    id: 1,
+    name: 'Superb Fairy-wren',
+    scientificName: 'Malurus cyaneus',
+    category: 'birds',
+    icon: '🐦',
+    habitat: 'Gardens, parks, shrubland and areas with dense low vegetation.',
+    food: 'Small insects and other invertebrates.',
+    role: 'Helps control insect populations and contributes to urban food webs.',
+    tip: 'Dense native shrubs can provide shelter and safer nesting areas.',
+  },
+
+  {
+    id: 2,
+    name: 'Rainbow Lorikeet',
+    scientificName: 'Trichoglossus moluccanus',
+    category: 'birds',
+    icon: '🦜',
+    habitat: 'Urban parks, gardens and areas with flowering trees.',
+    food: 'Nectar, pollen, fruit and seeds.',
+    role: 'Can contribute to pollination and seed movement.',
+    tip: 'Flowering native trees can provide natural food resources.',
+  },
+
+  {
+    id: 3,
+    name: 'Blue-banded Bee',
+    scientificName: 'Amegilla cingulata',
+    category: 'pollinators',
+    icon: '🐝',
+    habitat: 'Gardens and areas with flowering plants and suitable nesting spaces.',
+    food: 'Nectar and pollen from flowers.',
+    role: 'Supports pollination of flowering plants.',
+    tip: 'Plant a variety of flowering species and reduce pesticide use.',
+  },
+
+  {
+    id: 4,
+    name: 'Common Brown Butterfly',
+    scientificName: 'Heteronympha merope',
+    category: 'pollinators',
+    icon: '🦋',
+    habitat: 'Grasslands, gardens and vegetated urban spaces.',
+    food: 'Adults feed on nectar while larvae feed on grasses.',
+    role: 'Contributes to pollination and forms part of urban food webs.',
+    tip: 'Native grasses and flowering plants can support different life stages.',
+  },
+
+  {
+    id: 5,
+    name: 'River Red Gum',
+    scientificName: 'Eucalyptus camaldulensis',
+    category: 'plants',
+    icon: '🌳',
+    habitat: 'Open woodland, waterways and suitable urban green spaces.',
+    food: 'Produces flowers, nectar and habitat resources used by wildlife.',
+    role: 'Provides food, shelter and nesting habitat for many species.',
+    tip: 'Large trees require appropriate space for mature growth.',
+  },
+
+  {
+    id: 6,
+    name: 'Correa',
+    scientificName: 'Correa reflexa',
+    category: 'plants',
+    icon: '🌿',
+    habitat: 'Gardens, shrubland and native planting areas.',
+    food: 'Flowers provide nectar for birds and insects.',
+    role: 'Supports pollinators and provides low-level habitat structure.',
+    tip: 'Useful for adding native flowering vegetation to smaller gardens.',
+  },
+
+  {
+    id: 7,
+    name: 'Ladybird',
+    scientificName: 'Coccinellidae',
+    category: 'insects',
+    icon: '🐞',
+    habitat: 'Gardens, parks and areas containing vegetation.',
+    food: 'Many species feed on aphids and other small insects.',
+    role: 'Can help regulate populations of plant-feeding insects.',
+    tip: 'Avoid unnecessary pesticide use to support beneficial insects.',
+  },
+
+  {
+    id: 8,
+    name: 'Dragonfly',
+    scientificName: 'Anisoptera',
+    category: 'insects',
+    icon: '🪰',
+    habitat: 'Wetlands, ponds, waterways and nearby vegetation.',
+    food: 'Other insects, including small flying insects.',
+    role: 'Acts as a predator and contributes to aquatic and terrestrial food webs.',
+    tip: 'Healthy ponds and wetland vegetation can provide useful habitat.',
+  },
+]
+
+const filteredUrbanSpecies = computed(() => {
+  const search = speciesSearch.value.trim().toLowerCase()
+
+  return urbanSpeciesList.filter((species) => {
+    const matchesCategory =
+      selectedSpeciesCategory.value === 'all' || species.category === selectedSpeciesCategory.value
+
+    const matchesSearch =
+      species.name.toLowerCase().includes(search) ||
+      species.scientificName.toLowerCase().includes(search)
+
+    return matchesCategory && matchesSearch
+  })
+})
+
+const resetSpeciesFilters = () => {
+  speciesSearch.value = ''
+  selectedSpeciesCategory.value = 'all'
+}
+
 const currentSpecies = computed(() => {
   if (!selectedSpecies.value) {
     return null
@@ -135,13 +257,37 @@ const currentSpecies = computed(() => {
   return speciesData[selectedSpecies.value]
 })
 
-const openSpecies = (species) => {
+const openUrbanSpecies = async (species) => {
+  lastFocusedElement.value = document.activeElement
+
   selectedSpecies.value = species
+
+  await nextTick()
+
+  speciesModal.value?.focus()
 }
 
-const closeSpecies = () => {
+const closeSpecies = async () => {
   selectedSpecies.value = null
+
+  await nextTick()
+
+  lastFocusedElement.value?.focus()
 }
+
+const handleModalKeydown = (event) => {
+  if (event.key === 'Escape' && selectedSpecies.value) {
+    closeSpecies()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleModalKeydown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleModalKeydown)
+})
 
 /* =========================
    Interactive Food Chain
@@ -534,100 +680,195 @@ const isActiveArrow = (index) => {
       <div class="section-header">
         <p class="section-tag">DISCOVER URBAN NATURE</p>
 
-        <h2>Urban Species</h2>
+        <h2>Urban Species Explorer</h2>
 
         <div class="section-line"></div>
 
         <p>
-          Cities can support many different forms of life. Select a group to learn more about its
-          role in urban biodiversity.
+          Search and filter urban species to learn how plants, birds, pollinators and insects
+          contribute to biodiversity.
         </p>
       </div>
 
-      <div class="species-grid">
-        <!-- Birds -->
-        <button class="species-card" @click="openSpecies('birds')">
-          <span class="species-icon"> 🐦 </span>
+      <!-- Explorer Controls -->
 
-          <h3>Urban Birds</h3>
+      <div class="species-explorer-controls">
+        <div class="species-search">
+          <label for="species-search"> Search species </label>
 
-          <p>Birds use trees, gardens and green spaces for food, shelter and nesting.</p>
+          <input
+            id="species-search"
+            v-model="speciesSearch"
+            type="search"
+            placeholder="Search by common or scientific name..."
+          />
+        </div>
 
-          <span class="learn-more"> Learn More → </span>
+        <div class="species-filter">
+          <label for="species-category"> Category </label>
+
+          <select id="species-category" v-model="selectedSpeciesCategory">
+            <option value="all">All Species</option>
+
+            <option value="birds">Birds</option>
+
+            <option value="pollinators">Pollinators</option>
+
+            <option value="plants">Native Plants</option>
+
+            <option value="insects">Insects</option>
+          </select>
+        </div>
+
+        <button type="button" class="species-reset-button" @click="resetSpeciesFilters">
+          Reset Filters
         </button>
+      </div>
 
-        <!-- Pollinators -->
-        <button class="species-card" @click="openSpecies('pollinators')">
-          <span class="species-icon"> 🐝 </span>
+      <!-- Result Count -->
 
-          <h3>Pollinators</h3>
+      <div class="species-result-info">
+        Showing
 
-          <p>
-            Bees, butterflies and other pollinators support flowering plants and ecosystem health.
+        <strong>
+          {{ filteredUrbanSpecies.length }}
+        </strong>
+
+        species
+      </div>
+
+      <!-- Species Cards -->
+
+      <div v-if="filteredUrbanSpecies.length" class="species-grid">
+        <button
+          v-for="species in filteredUrbanSpecies"
+          :key="species.id"
+          type="button"
+          class="species-card"
+          @click="openUrbanSpecies(species)"
+        >
+          <span class="species-icon" aria-hidden="true">
+            {{ species.icon }}
+          </span>
+
+          <span class="species-category-label">
+            {{ species.category }}
+          </span>
+
+          <h3>
+            {{ species.name }}
+          </h3>
+
+          <p class="scientific-species-name">
+            {{ species.scientificName }}
           </p>
 
-          <span class="learn-more"> Learn More → </span>
+          <p>
+            {{ species.role }}
+          </p>
+
+          <span class="learn-more"> Explore Species → </span>
         </button>
+      </div>
 
-        <!-- Plants -->
-        <button class="species-card" @click="openSpecies('plants')">
-          <span class="species-icon"> 🌿 </span>
+      <!-- No Results -->
 
-          <h3>Native Plants</h3>
+      <div v-else class="species-no-results" role="status">
+        <strong> No species found </strong>
 
-          <p>Native vegetation can provide important food and habitat for local wildlife.</p>
-
-          <span class="learn-more"> Learn More → </span>
-        </button>
-
-        <!-- Insects -->
-        <button class="species-card" @click="openSpecies('insects')">
-          <span class="species-icon"> 🦋 </span>
-
-          <h3>Urban Insects</h3>
-
-          <p>Insects contribute to pollination, decomposition and urban food webs.</p>
-
-          <span class="learn-more"> Learn More → </span>
-        </button>
+        <p>Try another search term or category.</p>
       </div>
     </section>
 
     <!-- =========================
          Species Modal
     ========================== -->
-    <div v-if="currentSpecies" class="modal-overlay" @click.self="closeSpecies">
-      <div class="species-modal">
+    <div v-if="selectedSpecies" class="modal-overlay" @click.self="closeSpecies">
+      <div
+        ref="speciesModal"
+        class="species-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="species-modal-title"
+        tabindex="-1"
+      >
         <button
+          type="button"
           class="close-button"
           @click="closeSpecies"
-          aria-label="Close biodiversity information"
+          aria-label="Close species information"
         >
           ×
         </button>
 
-        <p class="modal-tag">URBAN BIODIVERSITY</p>
+        <p class="modal-tag">URBAN SPECIES EXPLORER</p>
 
-        <h2>
-          {{ currentSpecies.title }}
-        </h2>
+        <div class="species-modal-title">
+          <span class="modal-species-icon" aria-hidden="true">
+            {{ selectedSpecies.icon }}
+          </span>
+
+          <div>
+            <h2 id="species-modal-title">
+              {{ selectedSpecies.name }}
+            </h2>
+
+            <p class="modal-scientific-name">
+              {{ selectedSpecies.scientificName }}
+            </p>
+          </div>
+        </div>
 
         <div class="modal-line"></div>
 
-        <p class="modal-intro">
-          {{ currentSpecies.intro }}
-        </p>
+        <div class="species-detail-grid">
+          <article class="species-detail-item">
+            <span aria-hidden="true"> 🏡 </span>
 
-        <div class="detail-grid">
-          <div v-for="detail in currentSpecies.details" :key="detail.title" class="detail-item">
-            <h3>
-              {{ detail.title }}
-            </h3>
+            <div>
+              <h3>Habitat</h3>
 
-            <p>
-              {{ detail.text }}
-            </p>
-          </div>
+              <p>
+                {{ selectedSpecies.habitat }}
+              </p>
+            </div>
+          </article>
+
+          <article class="species-detail-item">
+            <span aria-hidden="true"> 🍽️ </span>
+
+            <div>
+              <h3>Food Source / Diet</h3>
+
+              <p>
+                {{ selectedSpecies.food }}
+              </p>
+            </div>
+          </article>
+
+          <article class="species-detail-item">
+            <span aria-hidden="true"> 🌱 </span>
+
+            <div>
+              <h3>Ecosystem Role</h3>
+
+              <p>
+                {{ selectedSpecies.role }}
+              </p>
+            </div>
+          </article>
+
+          <article class="species-detail-item">
+            <span aria-hidden="true"> 💡 </span>
+
+            <div>
+              <h3>Urban Biodiversity Tip</h3>
+
+              <p>
+                {{ selectedSpecies.tip }}
+              </p>
+            </div>
+          </article>
         </div>
       </div>
     </div>
@@ -1255,7 +1496,226 @@ const isActiveArrow = (index) => {
 
   gap: 20px;
 }
+/* =========================
+   Urban Species Explorer
+========================= */
 
+.species-explorer-controls {
+  max-width: 1100px;
+
+  margin: 0 auto 20px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.5fr)
+    minmax(180px, 0.8fr)
+    auto;
+
+  gap: 16px;
+
+  align-items: end;
+}
+
+.species-search,
+.species-filter {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+.species-search label,
+.species-filter label {
+  color: #2f6b3b;
+
+  font-size: 14px;
+
+  font-weight: 700;
+}
+
+.species-search input,
+.species-filter select {
+  width: 100%;
+
+  min-height: 46px;
+
+  padding: 10px 13px;
+
+  font: inherit;
+
+  color: #37463a;
+
+  background: white;
+
+  border: 1px solid #cfdccf;
+
+  border-radius: 10px;
+}
+
+.species-search input:focus,
+.species-filter select:focus {
+  outline: 3px solid rgba(47, 107, 59, 0.18);
+
+  border-color: #2f6b3b;
+}
+
+.species-reset-button {
+  min-height: 46px;
+
+  padding: 10px 18px;
+
+  font: inherit;
+
+  font-weight: 700;
+
+  color: white;
+
+  background: #2f6b3b;
+
+  border: none;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+}
+
+.species-reset-button:hover {
+  background: #255830;
+}
+
+.species-reset-button:focus-visible {
+  outline: 3px solid #2f6b3b;
+
+  outline-offset: 3px;
+}
+
+.species-result-info {
+  max-width: 1100px;
+
+  margin: 0 auto 20px;
+
+  color: #657066;
+
+  font-size: 14px;
+}
+
+.species-category-label {
+  display: inline-block;
+
+  margin-bottom: 8px;
+
+  color: #688a63;
+
+  font-size: 11px;
+
+  font-weight: 800;
+
+  letter-spacing: 1.5px;
+
+  text-transform: uppercase;
+}
+
+.scientific-species-name {
+  margin-top: -6px;
+
+  color: #6c776e !important;
+
+  font-size: 14px;
+
+  font-style: italic;
+}
+
+.species-no-results {
+  max-width: 600px;
+
+  margin: 25px auto 0;
+
+  padding: 35px;
+
+  text-align: center;
+
+  background: white;
+
+  border: 1px solid #dfe8dc;
+
+  border-radius: 14px;
+}
+
+.species-no-results strong {
+  color: #2f6b3b;
+
+  font-size: 20px;
+}
+
+/* Species Modal */
+
+.species-modal-title {
+  display: flex;
+
+  align-items: center;
+
+  gap: 18px;
+}
+
+.modal-species-icon {
+  font-size: 52px;
+}
+
+.modal-scientific-name {
+  margin: 5px 0 0;
+
+  color: #687369;
+
+  font-style: italic;
+}
+
+.species-detail-grid {
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 16px;
+
+  margin-top: 25px;
+}
+
+.species-detail-item {
+  display: grid;
+
+  grid-template-columns: 38px 1fr;
+
+  gap: 12px;
+
+  padding: 20px;
+
+  background: #f7faf5;
+
+  border: 1px solid #e0e9dd;
+
+  border-radius: 13px;
+}
+
+.species-detail-item > span {
+  font-size: 23px;
+}
+
+.species-detail-item h3 {
+  margin: 0 0 7px;
+
+  color: #2f6b3b;
+
+  font-size: 16px;
+}
+
+.species-detail-item p {
+  margin: 0;
+
+  color: #555;
+
+  line-height: 1.65;
+}
 .species-card {
   width: 100%;
 
@@ -1314,6 +1774,14 @@ const isActiveArrow = (index) => {
   color: #2f6b3b;
 
   font-weight: 700;
+}
+.species-modal:focus {
+  outline: none;
+}
+
+.close-button:focus-visible {
+  outline: 3px solid #2f6b3b;
+  outline-offset: 3px;
 }
 
 /* =========================
@@ -1749,6 +2217,26 @@ const isActiveArrow = (index) => {
 
   .help-content h2 {
     font-size: 32px;
+  }
+
+  .species-explorer-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .species-reset-button {
+    width: 100%;
+  }
+
+  .species-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .species-modal-title {
+    align-items: flex-start;
+  }
+
+  .modal-species-icon {
+    font-size: 42px;
   }
 }
 </style>
