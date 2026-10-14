@@ -545,7 +545,7 @@ const clearForm = () => {
   margin-top: 6px;
   margin-bottom: 0;
 
-  color: #777;
+  color: #444444;
 
   font-size: 13px;
 }
@@ -627,7 +627,7 @@ const clearForm = () => {
 .divider p {
   margin: 0;
 
-  color: #888;
+  color: #444444;
 
   font-size: 13px;
 

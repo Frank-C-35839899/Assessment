@@ -1,7 +1,13 @@
 <script setup>
 import { ref } from 'vue'
+
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+
 import { db } from '../firebase'
+
+/* =========================
+   Form State
+========================= */
 
 const formData = ref({
   name: '',
@@ -22,7 +28,9 @@ const errors = ref({
 })
 
 const submitted = ref(false)
+
 const submitError = ref('')
+
 const isSubmitting = ref(false)
 
 /* =========================
@@ -51,14 +59,16 @@ const validateForm = () => {
 
   const reason = formData.value.reason.trim()
 
-  // Name
+  /* Name */
+
   if (name.length < 2 || name.length > 50) {
     errors.value.name = 'Name must be between 2 and 50 characters.'
 
     valid = false
   }
 
-  // Email
+  /* Email */
+
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   if (!emailPattern.test(email)) {
@@ -67,28 +77,32 @@ const validateForm = () => {
     valid = false
   }
 
-  // Activity
+  /* Activity */
+
   if (!formData.value.activity) {
     errors.value.activity = 'Please select an activity.'
 
     valid = false
   }
 
-  // Availability
+  /* Availability */
+
   if (availability.length < 2) {
     errors.value.availability = 'Please provide your availability.'
 
     valid = false
   }
 
-  // Experience
+  /* Experience */
+
   if (experience.length > 300) {
     errors.value.experience = 'Experience must not exceed 300 characters.'
 
     valid = false
   }
 
-  // Reason
+  /* Reason */
+
   if (reason.length > 300) {
     errors.value.reason = 'Reason must not exceed 300 characters.'
 
@@ -104,6 +118,7 @@ const validateForm = () => {
 
 const submitForm = async () => {
   submitted.value = false
+
   submitError.value = ''
 
   if (!validateForm()) {
@@ -167,156 +182,249 @@ const clearForm = () => {
   }
 
   submitError.value = ''
+
+  submitted.value = false
 }
 </script>
 
 <template>
-  <div class="registration-page">
-    <h1>Volunteer Registration</h1>
+  <main class="registration-page">
+    <!-- =========================
+         Header
+    ========================== -->
 
-    <p class="intro">
-      Complete the form below to express your interest in volunteering for urban greening and
-      biodiversity activities.
-    </p>
+    <header class="page-header">
+      <p class="page-tag">VOLUNTEER WITH US</p>
 
-    <form class="registration-form" @submit.prevent="submitForm">
-      <!-- Name -->
-      <div class="form-group">
-        <label for="name"> Name </label>
+      <h1>Volunteer Registration</h1>
 
-        <input
-          id="name"
-          v-model="formData.name"
-          type="text"
-          maxlength="50"
-          placeholder="Enter your name"
-          required
-        />
+      <div class="title-line" aria-hidden="true"></div>
 
-        <p v-if="errors.name" class="error-message">
-          {{ errors.name }}
-        </p>
-      </div>
-
-      <!-- Email -->
-      <div class="form-group">
-        <label for="email"> Email </label>
-
-        <input
-          id="email"
-          v-model="formData.email"
-          type="email"
-          placeholder="Enter your email"
-          autocomplete="email"
-          required
-        />
-
-        <p v-if="errors.email" class="error-message">
-          {{ errors.email }}
-        </p>
-      </div>
-
-      <!-- Activity -->
-      <div class="form-group">
-        <label for="activity"> Preferred Activity </label>
-
-        <select id="activity" v-model="formData.activity" required>
-          <option disabled value="">Please select an activity</option>
-
-          <option>Community Tree Planting</option>
-
-          <option>Community Garden Day</option>
-
-          <option>Biodiversity Walk</option>
-        </select>
-
-        <p v-if="errors.activity" class="error-message">
-          {{ errors.activity }}
-        </p>
-      </div>
-
-      <!-- Availability -->
-      <div class="form-group">
-        <label for="availability"> Availability </label>
-
-        <select id="availability" v-model="formData.availability" required>
-          <option disabled value="">Select availability</option>
-
-          <option>Weekdays</option>
-
-          <option>Weekends</option>
-
-          <option>Flexible</option>
-        </select>
-
-        <p v-if="errors.availability" class="error-message">
-          {{ errors.availability }}
-        </p>
-      </div>
-
-      <!-- Experience -->
-      <div class="form-group">
-        <label for="experience"> Previous Volunteer Experience </label>
-
-        <textarea
-          id="experience"
-          v-model="formData.experience"
-          rows="4"
-          maxlength="300"
-          placeholder="Describe any previous experience"
-        ></textarea>
-
-        <p class="character-count">{{ formData.experience.length }} / 300</p>
-
-        <p v-if="errors.experience" class="error-message">
-          {{ errors.experience }}
-        </p>
-      </div>
-
-      <!-- Reason -->
-      <div class="form-group">
-        <label for="reason"> Why would you like to volunteer? </label>
-
-        <textarea
-          id="reason"
-          v-model="formData.reason"
-          rows="4"
-          maxlength="300"
-          placeholder="Tell us why you would like to volunteer"
-        ></textarea>
-
-        <p class="character-count">{{ formData.reason.length }} / 300</p>
-
-        <p v-if="errors.reason" class="error-message">
-          {{ errors.reason }}
-        </p>
-      </div>
-
-      <!-- Submit Error -->
-      <p v-if="submitError" class="submit-error">
-        {{ submitError }}
+      <p class="intro">
+        Complete the form below to express your interest in volunteering for urban greening and
+        biodiversity activities.
       </p>
+    </header>
 
-      <!-- Buttons -->
-      <div class="buttons">
-        <button type="submit" class="submit-button" :disabled="isSubmitting">
-          {{ isSubmitting ? 'Submitting...' : 'Submit' }}
-        </button>
+    <!-- =========================
+         Form
+    ========================== -->
 
-        <button type="button" class="clear-button" :disabled="isSubmitting" @click="clearForm">
-          Clear
-        </button>
-      </div>
-    </form>
+    <section class="registration-card" aria-labelledby="volunteer-form-heading">
+      <h2 id="volunteer-form-heading" class="sr-only">Volunteer registration form</h2>
 
-    <!-- Success -->
-    <div v-if="submitted" class="success-message">
+      <form class="registration-form" novalidate @submit.prevent="submitForm">
+        <!-- =========================
+             Name
+        ========================== -->
+
+        <div class="form-group">
+          <label for="name"> Name </label>
+
+          <input
+            id="name"
+            v-model="formData.name"
+            type="text"
+            maxlength="50"
+            placeholder="Enter your name"
+            autocomplete="name"
+            required
+            :aria-invalid="errors.name ? 'true' : 'false'"
+            :aria-describedby="errors.name ? 'volunteer-name-error' : undefined"
+          />
+
+          <p v-if="errors.name" id="volunteer-name-error" class="error-message" role="alert">
+            {{ errors.name }}
+          </p>
+        </div>
+
+        <!-- =========================
+             Email
+        ========================== -->
+
+        <div class="form-group">
+          <label for="email"> Email </label>
+
+          <input
+            id="email"
+            v-model="formData.email"
+            type="email"
+            placeholder="Enter your email"
+            autocomplete="email"
+            required
+            :aria-invalid="errors.email ? 'true' : 'false'"
+            :aria-describedby="errors.email ? 'volunteer-email-error' : undefined"
+          />
+
+          <p v-if="errors.email" id="volunteer-email-error" class="error-message" role="alert">
+            {{ errors.email }}
+          </p>
+        </div>
+
+        <!-- =========================
+             Activity
+        ========================== -->
+
+        <div class="form-group">
+          <label for="activity"> Preferred Activity </label>
+
+          <select
+            id="activity"
+            v-model="formData.activity"
+            required
+            :aria-invalid="errors.activity ? 'true' : 'false'"
+            :aria-describedby="errors.activity ? 'volunteer-activity-error' : undefined"
+          >
+            <option disabled value="">Please select an activity</option>
+
+            <option>Community Tree Planting</option>
+
+            <option>Community Garden Day</option>
+
+            <option>Biodiversity Walk</option>
+          </select>
+
+          <p
+            v-if="errors.activity"
+            id="volunteer-activity-error"
+            class="error-message"
+            role="alert"
+          >
+            {{ errors.activity }}
+          </p>
+        </div>
+
+        <!-- =========================
+             Availability
+        ========================== -->
+
+        <div class="form-group">
+          <label for="availability"> Availability </label>
+
+          <select
+            id="availability"
+            v-model="formData.availability"
+            required
+            :aria-invalid="errors.availability ? 'true' : 'false'"
+            :aria-describedby="errors.availability ? 'volunteer-availability-error' : undefined"
+          >
+            <option disabled value="">Select availability</option>
+
+            <option>Weekdays</option>
+
+            <option>Weekends</option>
+
+            <option>Flexible</option>
+          </select>
+
+          <p
+            v-if="errors.availability"
+            id="volunteer-availability-error"
+            class="error-message"
+            role="alert"
+          >
+            {{ errors.availability }}
+          </p>
+        </div>
+
+        <!-- =========================
+             Experience
+        ========================== -->
+
+        <div class="form-group">
+          <label for="experience"> Previous Volunteer Experience </label>
+
+          <textarea
+            id="experience"
+            v-model="formData.experience"
+            rows="4"
+            maxlength="300"
+            placeholder="Describe any previous experience"
+            aria-describedby="experience-count volunteer-experience-error"
+            :aria-invalid="errors.experience ? 'true' : 'false'"
+          ></textarea>
+
+          <p id="experience-count" class="character-count">
+            {{ formData.experience.length }}
+            / 300 characters
+          </p>
+
+          <p
+            v-if="errors.experience"
+            id="volunteer-experience-error"
+            class="error-message"
+            role="alert"
+          >
+            {{ errors.experience }}
+          </p>
+        </div>
+
+        <!-- =========================
+             Reason
+        ========================== -->
+
+        <div class="form-group">
+          <label for="reason"> Why would you like to volunteer? </label>
+
+          <textarea
+            id="reason"
+            v-model="formData.reason"
+            rows="4"
+            maxlength="300"
+            placeholder="Tell us why you would like to volunteer"
+            aria-describedby="reason-count volunteer-reason-error"
+            :aria-invalid="errors.reason ? 'true' : 'false'"
+          ></textarea>
+
+          <p id="reason-count" class="character-count">
+            {{ formData.reason.length }}
+            / 300 characters
+          </p>
+
+          <p v-if="errors.reason" id="volunteer-reason-error" class="error-message" role="alert">
+            {{ errors.reason }}
+          </p>
+        </div>
+
+        <!-- =========================
+             Submission Error
+        ========================== -->
+
+        <div v-if="submitError" class="submit-error" role="alert" aria-live="assertive">
+          {{ submitError }}
+        </div>
+
+        <!-- =========================
+             Buttons
+        ========================== -->
+
+        <div class="buttons">
+          <button type="submit" class="submit-button" :disabled="isSubmitting">
+            {{ isSubmitting ? 'Submitting...' : 'Submit' }}
+          </button>
+
+          <button type="button" class="clear-button" :disabled="isSubmitting" @click="clearForm">
+            Clear
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- =========================
+         Success Message
+    ========================== -->
+
+    <div v-if="submitted" class="success-message" role="status" aria-live="polite">
       Thank you for registering your interest as a volunteer. We will contact you with more
       information about upcoming activities.
     </div>
 
+    <!-- =========================
+         Back Link
+    ========================== -->
+
     <router-link to="/" class="back-button"> ← Back to Home </router-link>
-  </div>
+  </main>
 </template>
 
 <style scoped>
@@ -325,21 +433,55 @@ const clearForm = () => {
 
   margin: 0 auto;
 
-  padding: 80px 30px 60px;
+  padding: 70px 30px 60px;
 }
 
-.registration-page h1 {
-  margin-bottom: 20px;
+/* =========================
+   Header
+========================= */
+
+.page-header {
+  margin-bottom: 35px;
+
+  text-align: center;
+}
+
+.page-tag {
+  margin: 0 0 10px;
+
+  color: #3f6338;
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  letter-spacing: 3px;
+}
+
+.page-header h1 {
+  margin: 0;
 
   color: #2f6b3b;
 
   font-size: 42px;
 }
 
-.intro {
-  margin-bottom: 35px;
+.title-line {
+  width: 70px;
 
-  color: #444;
+  height: 4px;
+
+  margin: 15px auto 18px;
+
+  background: #6d9c63;
+
+  border-radius: 10px;
+}
+
+.intro {
+  margin: 0;
+
+  color: #4d4d4d;
 
   font-size: 18px;
 
@@ -347,19 +489,23 @@ const clearForm = () => {
 }
 
 /* =========================
-   Form
+   Form Card
 ========================= */
 
-.registration-form {
+.registration-card {
   padding: 32px;
 
   background: #f8faf7;
 
-  border: 1px solid #ddd;
+  border: 1px solid #d9e2d7;
 
   border-radius: 14px;
 
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.registration-form {
+  width: 100%;
 }
 
 .form-group {
@@ -385,13 +531,15 @@ const clearForm = () => {
 
   padding: 12px;
 
+  color: #222;
+
+  background: white;
+
   font-family: inherit;
 
   font-size: 16px;
 
-  background: white;
-
-  border: 1px solid #ccc;
+  border: 1px solid #969f94;
 
   border-radius: 6px;
 
@@ -400,29 +548,36 @@ const clearForm = () => {
   transition: 0.2s;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  border-color: #6f9f75;
-
-  box-shadow: 0 0 0 3px rgba(111, 159, 117, 0.15);
-}
-
 .form-group textarea {
   resize: vertical;
 }
 
 /* =========================
-   Validation
+   Focus
+========================= */
+
+.form-group input:focus-visible,
+.form-group select:focus-visible,
+.form-group textarea:focus-visible {
+  outline: 3px solid #2f6b3b;
+
+  outline-offset: 2px;
+
+  border-color: #2f6b3b;
+}
+
+/* =========================
+   Errors
 ========================= */
 
 .error-message {
-  margin-top: 7px;
-  margin-bottom: 0;
+  margin: 7px 0 0;
 
-  color: #b42318;
+  color: #971f16;
 
   font-size: 14px;
+
+  font-weight: 600;
 }
 
 .character-count {
@@ -430,9 +585,9 @@ const clearForm = () => {
 
   text-align: right;
 
-  color: #777;
+  color: #595959;
 
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .submit-error {
@@ -440,13 +595,15 @@ const clearForm = () => {
 
   padding: 12px 14px;
 
-  background: #fce8e6;
+  color: #8f1c13;
 
-  color: #b42318;
+  background: #fdecec;
 
-  border-radius: 6px;
+  border: 1px solid #e5aaa6;
 
-  font-size: 14px;
+  border-radius: 7px;
+
+  font-weight: 600;
 }
 
 /* =========================
@@ -485,17 +642,25 @@ const clearForm = () => {
 }
 
 .submit-button:hover:not(:disabled) {
-  background: #25552f;
+  background: #24562f;
 }
 
 .clear-button {
-  background: #ddd;
+  background: #d9ded7;
 
-  color: #333;
+  color: #222;
 }
 
 .clear-button:hover:not(:disabled) {
-  background: #ccc;
+  background: #c8cec6;
+}
+
+.submit-button:focus-visible,
+.clear-button:focus-visible,
+.back-button:focus-visible {
+  outline: 3px solid #2f6b3b;
+
+  outline-offset: 3px;
 }
 
 .submit-button:disabled,
@@ -506,7 +671,7 @@ const clearForm = () => {
 }
 
 /* =========================
-   Messages
+   Success
 ========================= */
 
 .success-message {
@@ -514,17 +679,21 @@ const clearForm = () => {
 
   padding: 18px;
 
+  color: #24562f;
+
   background: #e7f3e8;
 
-  color: #2f6b3b;
+  border: 1px solid #b7d1b9;
 
   border-radius: 8px;
 
   line-height: 1.6;
+
+  font-weight: 600;
 }
 
 /* =========================
-   Back Button
+   Back Link
 ========================= */
 
 .back-button {
@@ -546,11 +715,35 @@ const clearForm = () => {
 }
 
 .back-button:hover {
-  background: #25552f;
+  background: #24562f;
 }
 
 /* =========================
-   Responsive
+   Screen Reader Only
+========================= */
+
+.sr-only {
+  position: absolute;
+
+  width: 1px;
+
+  height: 1px;
+
+  padding: 0;
+
+  margin: -1px;
+
+  overflow: hidden;
+
+  clip: rect(0, 0, 0, 0);
+
+  white-space: nowrap;
+
+  border: 0;
+}
+
+/* =========================
+   Mobile
 ========================= */
 
 @media (max-width: 600px) {
@@ -558,11 +751,11 @@ const clearForm = () => {
     padding: 50px 16px;
   }
 
-  .registration-page h1 {
+  .page-header h1 {
     font-size: 34px;
   }
 
-  .registration-form {
+  .registration-card {
     padding: 24px 18px;
   }
 

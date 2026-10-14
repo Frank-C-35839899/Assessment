@@ -59,6 +59,7 @@ const emailSuccess = ref('')
 
 const emailError = ref('')
 
+const emailErrorField = ref('')
 /* =========================
    User Filters
 ========================= */
@@ -671,14 +672,13 @@ const exportVolunteersPDF = () => {
 
 const handleAttachment = (event) => {
   emailError.value = ''
-
   emailSuccess.value = ''
+  emailErrorField.value = ''
 
   const file = event.target.files[0]
 
   if (!file) {
     selectedAttachment.value = null
-
     return
   }
 
@@ -686,6 +686,8 @@ const handleAttachment = (event) => {
 
   if (file.size > maxFileSize) {
     emailError.value = 'Attachment must not exceed 5 MB.'
+
+    emailErrorField.value = 'attachment'
 
     event.target.value = ''
 
@@ -696,7 +698,6 @@ const handleAttachment = (event) => {
 
   selectedAttachment.value = file
 }
-
 /* =========================
    File → Base64
 ========================= */
@@ -727,8 +728,8 @@ const fileToBase64 = (file) => {
 
 const sendEmail = async () => {
   emailSuccess.value = ''
-
   emailError.value = ''
+  emailErrorField.value = ''
 
   const to = emailForm.value.to.trim()
 
@@ -741,17 +742,23 @@ const sendEmail = async () => {
   if (!emailPattern.test(to)) {
     emailError.value = 'Please enter a valid recipient email address.'
 
+    emailErrorField.value = 'to'
+
     return
   }
 
   if (subject.length < 1 || subject.length > 150) {
     emailError.value = 'Subject must be between 1 and 150 characters.'
 
+    emailErrorField.value = 'subject'
+
     return
   }
 
   if (message.length < 1 || message.length > 5000) {
     emailError.value = 'Message must be between 1 and 5000 characters.'
+
+    emailErrorField.value = 'message'
 
     return
   }
@@ -803,6 +810,8 @@ const sendEmail = async () => {
     }
   } catch (error) {
     console.error('Email send failed:', error)
+
+    emailErrorField.value = 'general'
 
     if (error.code === 'functions/unauthenticated') {
       emailError.value = 'You must be logged in.'
@@ -896,16 +905,18 @@ const sendEmail = async () => {
          Send Email
     ========================== -->
 
-    <section class="admin-section email-section">
+    <section class="admin-section email-section" aria-labelledby="send-email-heading">
       <div class="section-title">
         <div>
-          <h2>Send Email</h2>
+          <h2 id="send-email-heading">Send Email</h2>
 
           <p>Send notifications and documents to Urban Canopy community members.</p>
         </div>
       </div>
 
-      <div class="email-form">
+      <form class="email-form" novalidate @submit.prevent="sendEmail">
+        <!-- Recipient -->
+
         <div class="email-field">
           <label for="email-to"> Recipient Email </label>
 
@@ -914,8 +925,14 @@ const sendEmail = async () => {
             v-model="emailForm.to"
             type="email"
             placeholder="example@gmail.com"
+            autocomplete="email"
+            required
+            :aria-invalid="emailErrorField === 'to' ? 'true' : 'false'"
+            :aria-describedby="emailErrorField === 'to' ? 'email-form-error' : undefined"
           />
         </div>
+
+        <!-- Subject -->
 
         <div class="email-field">
           <label for="email-subject"> Subject </label>
@@ -926,13 +943,18 @@ const sendEmail = async () => {
             type="text"
             maxlength="150"
             placeholder="Enter email subject"
+            required
+            aria-describedby="subject-count"
+            :aria-invalid="emailErrorField === 'subject' ? 'true' : 'false'"
           />
 
-          <small>
+          <small id="subject-count" class="character-count">
             {{ emailForm.subject.length }}
-            / 150
+            / 150 characters
           </small>
         </div>
+
+        <!-- Message -->
 
         <div class="email-field">
           <label for="email-message"> Message </label>
@@ -943,21 +965,26 @@ const sendEmail = async () => {
             rows="7"
             maxlength="5000"
             placeholder="Write your message..."
+            required
+            aria-describedby="message-count"
+            :aria-invalid="emailErrorField === 'message' ? 'true' : 'false'"
           ></textarea>
 
-          <small>
+          <small id="message-count" class="character-count">
             {{ emailForm.message.length }}
-            / 5000
+            / 5000 characters
           </small>
         </div>
 
+        <!-- Attachment -->
+
         <div class="email-field">
-          <label for="email-attachment"> Attachment </label>
+          <label> Attachment </label>
 
           <div class="custom-file-upload">
             <label for="email-attachment" class="file-button"> Choose File </label>
 
-            <span class="file-name">
+            <span id="file-name-status" class="file-name" aria-live="polite">
               {{ selectedAttachment ? selectedAttachment.name : 'No file chosen' }}
             </span>
 
@@ -965,13 +992,17 @@ const sendEmail = async () => {
               id="email-attachment"
               class="hidden-file-input"
               type="file"
+              aria-describedby="attachment-help file-name-status"
+              :aria-invalid="emailErrorField === 'attachment' ? 'true' : 'false'"
               @change="handleAttachment"
             />
           </div>
 
-          <small> Optional. Maximum file size: 5 MB. </small>
+          <small id="attachment-help" class="attachment-help">
+            Optional. Maximum file size: 5 MB.
+          </small>
 
-          <div v-if="selectedAttachment" class="selected-file">
+          <div v-if="selectedAttachment" class="selected-file" role="status" aria-live="polite">
             Selected:
             {{ selectedAttachment.name }}
 
@@ -980,18 +1011,35 @@ const sendEmail = async () => {
           </div>
         </div>
 
-        <div v-if="emailError" class="email-error">
+        <!-- Error -->
+
+        <div
+          v-if="emailError"
+          id="email-form-error"
+          class="email-error"
+          role="alert"
+          aria-live="assertive"
+        >
           {{ emailError }}
         </div>
 
-        <div v-if="emailSuccess" class="email-success">
+        <!-- Success -->
+
+        <div v-if="emailSuccess" class="email-success" role="status" aria-live="polite">
           {{ emailSuccess }}
         </div>
 
-        <button type="button" class="send-email-button" :disabled="emailSending" @click="sendEmail">
+        <!-- Send -->
+
+        <button
+          type="submit"
+          class="send-email-button"
+          :disabled="emailSending"
+          :aria-busy="emailSending ? 'true' : 'false'"
+        >
           {{ emailSending ? 'Sending...' : 'Send Email' }}
         </button>
-      </div>
+      </form>
     </section>
 
     <!-- =========================
@@ -1026,46 +1074,51 @@ const sendEmail = async () => {
 
       <div class="table-controls">
         <div class="control-group wide-control">
-          <label> Global Search </label>
+          <label for="volunteer-global-search"> Global Search </label>
 
           <input
-            v-model="userGlobalSearch"
-            type="text"
-            placeholder="Search name, email or role..."
-            @input="userCurrentPage = 1"
+            id="volunteer-global-search"
+            v-model="volunteerGlobalSearch"
+            type="search"
+            placeholder="Search all application fields..."
+            @input="volunteerCurrentPage = 1"
           />
         </div>
 
-        <button class="reset-button" @click="resetUserFilters">Reset Filters</button>
+        <button type="button" class="reset-button" @click="resetVolunteerFilters">
+          Reset Filters
+        </button>
       </div>
 
       <div class="filter-grid">
         <div class="control-group">
-          <label> Name </label>
+          <label for="user-name-filter"> Name </label>
 
           <input
+            id="user-name-filter"
             v-model="userNameFilter"
-            type="text"
+            type="search"
             placeholder="Search name"
             @input="userCurrentPage = 1"
           />
         </div>
 
         <div class="control-group">
-          <label> Email </label>
+          <label for="user-email-filter"> Email </label>
 
           <input
+            id="user-email-filter"
             v-model="userEmailFilter"
-            type="text"
+            type="search"
             placeholder="Search email"
             @input="userCurrentPage = 1"
           />
         </div>
 
         <div class="control-group">
-          <label> Role </label>
+          <label for="user-role-filter"> Role </label>
 
-          <select v-model="userRoleFilter" @change="userCurrentPage = 1">
+          <select id="user-role-filter" v-model="userRoleFilter" @change="userCurrentPage = 1">
             <option value="">All Roles</option>
 
             <option value="user">User</option>
@@ -1080,9 +1133,18 @@ const sendEmail = async () => {
           <thead>
             <tr>
               <th>
-                <button class="sort-button" @click="sortUsers('name')">
+                <button
+                  type="button"
+                  class="sort-button"
+                  :aria-label="`Sort users by name ${
+                    userSortField === 'name' ? userSortDirection : ''
+                  }`"
+                  @click="sortUsers('name')"
+                >
                   Name
-                  {{ getUserSortSymbol('name') }}
+                  <span aria-hidden="true">
+                    {{ getUserSortSymbol('name') }}
+                  </span>
                 </button>
               </th>
 
@@ -1196,12 +1258,13 @@ const sendEmail = async () => {
       </div>
 
       <div class="table-controls">
-        <div class="control-group wide-control">
-          <label> Global Search </label>
+        <div class="control-group">
+          <label for="volunteer-global-search"> Global Search </label>
 
           <input
+            id="volunteer-global-search"
             v-model="volunteerGlobalSearch"
-            type="text"
+            type="search"
             placeholder="Search all application fields..."
             @input="volunteerCurrentPage = 1"
           />
@@ -1212,33 +1275,36 @@ const sendEmail = async () => {
 
       <div class="filter-grid">
         <div class="control-group">
-          <label> Name </label>
+          <label for="volunteer-name-filter"> Name </label>
 
           <input
+            id="volunteer-name-filter"
             v-model="volunteerNameFilter"
-            type="text"
+            type="search"
             placeholder="Search name"
             @input="volunteerCurrentPage = 1"
           />
         </div>
 
         <div class="control-group">
-          <label> Email </label>
+          <label for="volunteer-email-filter"> Email </label>
 
           <input
+            id="volunteer-email-filter"
             v-model="volunteerEmailFilter"
-            type="text"
+            type="search"
             placeholder="Search email"
             @input="volunteerCurrentPage = 1"
           />
         </div>
 
         <div class="control-group">
-          <label> Activity </label>
+          <label for="volunteer-activity-filter"> Activity </label>
 
           <input
+            id="volunteer-activity-filter"
             v-model="volunteerActivityFilter"
-            type="text"
+            type="search"
             placeholder="Search activity"
             @input="volunteerCurrentPage = 1"
           />
@@ -1423,7 +1489,7 @@ const sendEmail = async () => {
 
 .stat-label {
   margin: 0 0 10px;
-  color: #7aa66d;
+  color: #4f6f49;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 1.8px;
@@ -1543,7 +1609,7 @@ const sendEmail = async () => {
 
 .email-field small {
   margin-top: 7px;
-  color: #777;
+  color: #4d4d4d;
   font-size: 12px;
   text-align: right;
 }
@@ -1725,13 +1791,13 @@ td {
 }
 
 .protected-text {
-  color: #777;
+  color: #4d4d4d;
 }
 
 .empty-message {
   padding: 30px;
   text-align: center;
-  color: #777;
+  color: #4d4d4d;
 }
 
 /* =========================
@@ -1764,7 +1830,7 @@ td {
 .rows-note {
   margin-top: 12px;
   text-align: center;
-  color: #777;
+  color: #4d4d4d;
   font-size: 13px;
 }
 
@@ -1778,11 +1844,47 @@ td {
   background: #fdecec;
   border-radius: 8px;
 }
+/* =========================
+   Accessibility Focus
+========================= */
 
+.email-field input:focus-visible,
+.email-field textarea:focus-visible,
+.hidden-file-input:focus-visible + *,
+.send-email-button:focus-visible,
+.export-button:focus-visible,
+.reset-button:focus-visible,
+.sort-button:focus-visible,
+.delete-button:focus-visible,
+.page-button:focus-visible,
+.control-group input:focus-visible,
+.control-group select:focus-visible {
+  outline: 3px solid #2f6b3b;
+  outline-offset: 3px;
+}
+
+.custom-file-upload:focus-within {
+  outline: 3px solid #2f6b3b;
+  outline-offset: 3px;
+  border-radius: 8px;
+}
 /* =========================
    Responsive
 ========================= */
-
+.email-field input:focus-visible,
+.email-field textarea:focus-visible,
+.hidden-file-input:focus-visible + *,
+.send-email-button:focus-visible,
+.export-button:focus-visible,
+.reset-button:focus-visible,
+.sort-button:focus-visible,
+.delete-button:focus-visible,
+.page-button:focus-visible,
+.control-group input:focus-visible,
+.control-group select:focus-visible {
+  outline: 3px solid #2f6b3b;
+  outline-offset: 3px;
+}
 @media (max-width: 900px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1831,9 +1933,22 @@ td {
   }
 }
 .hidden-file-input {
-  display: none;
-}
+  position: absolute;
 
+  width: 1px;
+  height: 1px;
+
+  padding: 0;
+  margin: -1px;
+
+  overflow: hidden;
+
+  clip: rect(0, 0, 0, 0);
+
+  white-space: nowrap;
+
+  border: 0;
+}
 .custom-file-upload {
   display: flex;
   align-items: center;
@@ -1869,7 +1984,13 @@ td {
 }
 
 .file-name {
-  color: #555;
+  color: #4d4d4d;
   font-size: 14px;
+}
+
+.custom-file-upload:focus-within {
+  outline: 3px solid #2f6b3b;
+  outline-offset: 3px;
+  border-radius: 8px;
 }
 </style>

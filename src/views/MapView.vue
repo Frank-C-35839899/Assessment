@@ -565,7 +565,7 @@ onMounted(() => {
 .page-tag {
   margin: 0 0 10px;
 
-  color: #7aa66d;
+  color: #3f6338;
 
   font-size: 13px;
 
@@ -958,7 +958,7 @@ onMounted(() => {
 .card-address {
   margin: 0 0 12px;
 
-  color: #777;
+  color: #4d4d4d;
 
   font-size: 14px;
 }

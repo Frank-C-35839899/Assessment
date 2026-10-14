@@ -63,14 +63,21 @@ onMounted(() => {
     </router-link>
 
     <!-- Hamburger Button -->
-    <button class="menu-button" @click="toggleMenu" aria-label="Open navigation menu">
+    <button
+      class="menu-button"
+      type="button"
+      @click="toggleMenu"
+      :aria-expanded="menuOpen"
+      aria-controls="main-navigation"
+      :aria-label="menuOpen ? 'Close navigation menu' : 'Open navigation menu'"
+    >
       <span></span>
       <span></span>
       <span></span>
     </button>
 
     <!-- Dropdown Menu -->
-    <nav v-if="menuOpen" class="menu">
+    <nav v-if="menuOpen" id="main-navigation" class="menu" aria-label="Main navigation">
       <router-link to="/" @click="closeMenu"> Home </router-link>
 
       <router-link to="/urban-greening" @click="closeMenu"> Urban Greening </router-link>
@@ -343,6 +350,19 @@ onMounted(() => {
     top: 66px;
     right: 14px;
     width: 200px;
+  }
+
+  .menu-button:focus-visible,
+  .menu a:focus-visible,
+  .logout-button:focus-visible {
+    outline: 3px solid #2f6b3b;
+    outline-offset: 3px;
+  }
+
+  .brand:focus-visible {
+    outline: 3px solid #2f6b3b;
+    outline-offset: 4px;
+    border-radius: 6px;
   }
 }
 </style>
