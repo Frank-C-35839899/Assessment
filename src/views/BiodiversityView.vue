@@ -144,46 +144,101 @@ const closeSpecies = () => {
 }
 
 /* =========================
-   Food Chain Data
+   Interactive Food Chain
 ========================= */
+
+const foodChainOrder = ['producer', 'primary', 'secondary', 'tertiary']
 
 const foodChainData = {
   producer: {
     title: 'Native Plants',
+    icon: '🌿',
     role: 'Producer',
-
+    trophicLevel: 'Level 1',
     description:
-      'Plants capture energy from sunlight and form the base of many food chains. They provide leaves, nectar, seeds and other resources for animals.',
+      'Native plants capture energy from sunlight and form the foundation of the urban food chain.',
+
+    consumes: 'Sunlight, water and nutrients from the soil',
+
+    consumedBy: 'Plant-feeding insects and other herbivores',
+
+    ecosystemRole:
+      'Provides nectar, leaves, seeds, fruit and habitat that support many other urban species.',
   },
 
   primary: {
     title: 'Insects',
+    icon: '🐛',
     role: 'Primary Consumer',
-
+    trophicLevel: 'Level 2',
     description:
-      'Many insects feed directly on plants, nectar or other plant material. They transfer energy from producers to higher levels of the food chain.',
+      'Plant-feeding insects transfer energy from vegetation to animals at higher trophic levels.',
+
+    consumes: 'Leaves, nectar, seeds and other plant material',
+
+    consumedBy: 'Small insect-eating birds and other predators',
+
+    ecosystemRole:
+      'Supports pollination, decomposition and provides an important food source for urban wildlife.',
   },
 
   secondary: {
     title: 'Small Birds',
+    icon: '🐦',
     role: 'Secondary Consumer',
-
+    trophicLevel: 'Level 3',
     description:
-      'Many small birds eat insects and other invertebrates, helping transfer energy to higher trophic levels.',
+      'Many small urban birds feed on insects and other invertebrates, moving energy higher through the food chain.',
+
+    consumes: 'Insects, larvae and other small invertebrates',
+
+    consumedBy: 'Birds of prey and other larger predators',
+
+    ecosystemRole:
+      'Helps control insect populations and connects lower trophic levels with larger predators.',
   },
 
   tertiary: {
     title: 'Birds of Prey',
+    icon: '🦅',
     role: 'Higher-Level Consumer',
-
+    trophicLevel: 'Level 4',
     description:
-      'Predatory birds may feed on smaller birds and other animals, placing them higher in the urban food chain.',
+      'Birds of prey occupy a higher trophic level and may feed on smaller birds and other animals.',
+
+    consumes: 'Smaller birds and other animals',
+
+    consumedBy: 'Few natural predators in this simplified urban food chain',
+
+    ecosystemRole: 'Helps regulate prey populations and contributes to ecological balance.',
   },
 }
 
 const currentFoodLevel = computed(() => {
   return foodChainData[selectedFoodLevel.value]
 })
+
+const selectedFoodIndex = computed(() => {
+  return foodChainOrder.indexOf(selectedFoodLevel.value)
+})
+
+const selectFoodLevel = (level) => {
+  selectedFoodLevel.value = level
+}
+
+const isRelatedFoodLevel = (level) => {
+  const index = foodChainOrder.indexOf(level)
+
+  return Math.abs(index - selectedFoodIndex.value) === 1
+}
+
+const isDimmedFoodLevel = (level) => {
+  return level !== selectedFoodLevel.value && !isRelatedFoodLevel(level)
+}
+
+const isActiveArrow = (index) => {
+  return selectedFoodIndex.value === index || selectedFoodIndex.value === index + 1
+}
 </script>
 
 <template>
@@ -281,84 +336,193 @@ const currentFoodLevel = computed(() => {
       </div>
 
       <div class="food-chain-container">
-        <div class="food-chain">
+        <!-- Interactive Food Chain -->
+        <div class="food-chain" aria-label="Interactive urban food chain">
           <!-- Producer -->
           <button
+            type="button"
             class="food-level"
-            :class="{ active: selectedFoodLevel === 'producer' }"
-            @click="selectedFoodLevel = 'producer'"
+            :class="{
+              active: selectedFoodLevel === 'producer',
+
+              related: isRelatedFoodLevel('producer'),
+
+              dimmed: isDimmedFoodLevel('producer'),
+            }"
+            @click="selectFoodLevel('producer')"
           >
-            <span class="food-icon"> 🌿 </span>
+            <span class="trophic-number"> 01 </span>
+
+            <span class="food-icon" aria-hidden="true"> 🌿 </span>
 
             <strong> Native Plants </strong>
 
             <small> Producer </small>
           </button>
 
-          <div class="chain-arrow">→</div>
+          <div
+            class="chain-arrow"
+            :class="{
+              active: isActiveArrow(0),
+            }"
+            aria-hidden="true"
+          >
+            →
+          </div>
 
           <!-- Primary Consumer -->
           <button
+            type="button"
             class="food-level"
-            :class="{ active: selectedFoodLevel === 'primary' }"
-            @click="selectedFoodLevel = 'primary'"
+            :class="{
+              active: selectedFoodLevel === 'primary',
+
+              related: isRelatedFoodLevel('primary'),
+
+              dimmed: isDimmedFoodLevel('primary'),
+            }"
+            @click="selectFoodLevel('primary')"
           >
-            <span class="food-icon"> 🐛 </span>
+            <span class="trophic-number"> 02 </span>
+
+            <span class="food-icon" aria-hidden="true"> 🐛 </span>
 
             <strong> Insects </strong>
 
             <small> Primary Consumer </small>
           </button>
 
-          <div class="chain-arrow">→</div>
+          <div
+            class="chain-arrow"
+            :class="{
+              active: isActiveArrow(1),
+            }"
+            aria-hidden="true"
+          >
+            →
+          </div>
 
           <!-- Secondary Consumer -->
           <button
+            type="button"
             class="food-level"
-            :class="{ active: selectedFoodLevel === 'secondary' }"
-            @click="selectedFoodLevel = 'secondary'"
+            :class="{
+              active: selectedFoodLevel === 'secondary',
+
+              related: isRelatedFoodLevel('secondary'),
+
+              dimmed: isDimmedFoodLevel('secondary'),
+            }"
+            @click="selectFoodLevel('secondary')"
           >
-            <span class="food-icon"> 🐦 </span>
+            <span class="trophic-number"> 03 </span>
+
+            <span class="food-icon" aria-hidden="true"> 🐦 </span>
 
             <strong> Small Birds </strong>
 
             <small> Secondary Consumer </small>
           </button>
 
-          <div class="chain-arrow">→</div>
+          <div
+            class="chain-arrow"
+            :class="{
+              active: isActiveArrow(2),
+            }"
+            aria-hidden="true"
+          >
+            →
+          </div>
 
           <!-- Higher Consumer -->
           <button
+            type="button"
             class="food-level"
-            :class="{ active: selectedFoodLevel === 'tertiary' }"
-            @click="selectedFoodLevel = 'tertiary'"
+            :class="{
+              active: selectedFoodLevel === 'tertiary',
+
+              related: isRelatedFoodLevel('tertiary'),
+
+              dimmed: isDimmedFoodLevel('tertiary'),
+            }"
+            @click="selectFoodLevel('tertiary')"
           >
-            <span class="food-icon"> 🦅 </span>
+            <span class="trophic-number"> 04 </span>
+
+            <span class="food-icon" aria-hidden="true"> 🦅 </span>
 
             <strong> Birds of Prey </strong>
 
-            <small> Higher Consumer </small>
+            <small> Higher-Level Consumer </small>
           </button>
         </div>
 
-        <!-- Dynamic Food Chain Explanation -->
-        <div class="food-detail">
-          <p class="food-role">
-            {{ currentFoodLevel.role }}
-          </p>
+        <!-- Selected Level Details -->
+        <div class="food-explorer" aria-live="polite">
+          <div class="food-overview">
+            <p class="food-role">
+              {{ currentFoodLevel.trophicLevel }}
+              ·
+              {{ currentFoodLevel.role }}
+            </p>
 
-          <h3>
-            {{ currentFoodLevel.title }}
-          </h3>
+            <div class="food-title-row">
+              <span class="food-detail-icon" aria-hidden="true">
+                {{ currentFoodLevel.icon }}
+              </span>
 
-          <p>
-            {{ currentFoodLevel.description }}
-          </p>
+              <h3>
+                {{ currentFoodLevel.title }}
+              </h3>
+            </div>
+
+            <p class="food-description">
+              {{ currentFoodLevel.description }}
+            </p>
+          </div>
+
+          <div class="food-relationships">
+            <article class="relationship-detail">
+              <span class="relationship-icon" aria-hidden="true"> 🍽️ </span>
+
+              <div>
+                <strong> What it consumes </strong>
+
+                <p>
+                  {{ currentFoodLevel.consumes }}
+                </p>
+              </div>
+            </article>
+
+            <article class="relationship-detail">
+              <span class="relationship-icon" aria-hidden="true"> 🔗 </span>
+
+              <div>
+                <strong> Consumed by </strong>
+
+                <p>
+                  {{ currentFoodLevel.consumedBy }}
+                </p>
+              </div>
+            </article>
+
+            <article class="relationship-detail">
+              <span class="relationship-icon" aria-hidden="true"> 🌱 </span>
+
+              <div>
+                <strong> Ecosystem role </strong>
+
+                <p>
+                  {{ currentFoodLevel.ecosystemRole }}
+                </p>
+              </div>
+            </article>
+          </div>
         </div>
 
         <p class="food-chain-note">
-          The arrows show the direction of energy transfer: from the organism being eaten to the
-          organism that consumes it.
+          The arrows show the direction of energy transfer. Select any organism to highlight its
+          direct relationship with neighbouring trophic levels.
         </p>
       </div>
     </section>
@@ -777,7 +941,7 @@ const currentFoodLevel = computed(() => {
 }
 
 /* =========================
-   Food Chain
+   Interactive Food Chain
 ========================= */
 
 .food-chain-section {
@@ -787,10 +951,12 @@ const currentFoodLevel = computed(() => {
 }
 
 .food-chain-container {
-  max-width: 1100px;
+  max-width: 1150px;
 
   margin: 0 auto;
 }
+
+/* Chain */
 
 .food-chain {
   display: flex;
@@ -798,16 +964,20 @@ const currentFoodLevel = computed(() => {
   align-items: center;
   justify-content: center;
 
-  gap: 14px;
+  gap: 12px;
 
   margin-bottom: 35px;
 }
 
-.food-level {
-  width: 190px;
-  min-height: 175px;
+/* Level */
 
-  padding: 24px 16px;
+.food-level {
+  position: relative;
+
+  width: 190px;
+  min-height: 190px;
+
+  padding: 25px 16px;
 
   display: flex;
 
@@ -830,7 +1000,12 @@ const currentFoodLevel = computed(() => {
 
   cursor: pointer;
 
-  transition: 0.25s;
+  transition:
+    transform 0.25s,
+    opacity 0.25s,
+    border-color 0.25s,
+    box-shadow 0.25s,
+    background 0.25s;
 }
 
 .food-level:hover {
@@ -840,13 +1015,47 @@ const currentFoodLevel = computed(() => {
 }
 
 .food-level.active {
-  border-color: #7eb36a;
+  transform: translateY(-6px);
 
-  background: #eef5ee;
+  background: #e6f2e3;
+
+  border-color: #2f6b3b;
+
+  box-shadow: 0 12px 28px rgba(47, 107, 59, 0.15);
+}
+
+.food-level.related {
+  background: #f4f8f2;
+
+  border-color: #a8c5a1;
+}
+
+.food-level.dimmed {
+  opacity: 0.48;
+}
+
+.food-level:focus-visible {
+  outline: 3px solid #2f6b3b;
+
+  outline-offset: 4px;
+}
+
+.trophic-number {
+  position: absolute;
+
+  top: 13px;
+  left: 15px;
+
+  color: #7aa66d;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 1px;
 }
 
 .food-icon {
-  font-size: 40px;
+  font-size: 42px;
 }
 
 .food-level strong {
@@ -858,75 +1067,167 @@ const currentFoodLevel = computed(() => {
 }
 
 .food-level small {
-  color: #777;
+  color: #616b62;
 
   text-align: center;
+
+  line-height: 1.4;
 }
 
+/* Arrow */
+
 .chain-arrow {
-  color: #7aa66d;
+  color: #bdcabc;
 
   font-size: 34px;
 
   font-weight: 700;
+
+  transition:
+    color 0.25s,
+    transform 0.25s;
 }
 
-.food-detail {
-  max-width: 760px;
+.chain-arrow.active {
+  color: #2f6b3b;
+
+  transform: scale(1.15);
+}
+
+/* Explorer */
+
+.food-explorer {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 0.9fr)
+    minmax(0, 1.1fr);
+
+  gap: 24px;
+
+  max-width: 950px;
 
   margin: 0 auto;
 
   padding: 30px;
 
-  text-align: center;
+  background: #ffffff;
 
-  background: white;
+  border: 1px solid #dce7d9;
 
-  border-left: 5px solid #7eb36a;
+  border-radius: 18px;
 
-  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+}
 
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+.food-overview {
+  padding-right: 25px;
+
+  border-right: 1px solid #e1e9df;
 }
 
 .food-role {
-  margin: 0 0 6px;
+  margin: 0 0 12px;
 
-  color: #7aa66d;
+  color: #65865f;
 
   font-size: 12px;
 
-  font-weight: 700;
+  font-weight: 800;
 
-  letter-spacing: 2px;
+  letter-spacing: 1.8px;
 
   text-transform: uppercase;
 }
 
-.food-detail h3 {
-  margin: 0 0 12px;
+.food-title-row {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 15px;
+}
+
+.food-detail-icon {
+  font-size: 38px;
+}
+
+.food-title-row h3 {
+  margin: 0;
 
   color: #2f6b3b;
 
-  font-size: 27px;
+  font-size: 26px;
 }
 
-.food-detail p:last-child {
-  margin-bottom: 0;
+.food-description {
+  margin: 0;
 
   color: #555;
 
-  line-height: 1.8;
+  line-height: 1.75;
 }
 
-.food-chain-note {
-  max-width: 760px;
+/* Relationships */
 
-  margin: 25px auto 0;
+.food-relationships {
+  display: grid;
+
+  gap: 12px;
+}
+
+.relationship-detail {
+  display: grid;
+
+  grid-template-columns: 38px 1fr;
+
+  gap: 12px;
+
+  padding: 14px 16px;
+
+  background: #f8fbf6;
+
+  border: 1px solid #e1e9df;
+
+  border-radius: 11px;
+}
+
+.relationship-icon {
+  font-size: 21px;
+}
+
+.relationship-detail strong {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color: #2f6b3b;
+
+  font-size: 14px;
+}
+
+.relationship-detail p {
+  margin: 0;
+
+  color: #555;
+
+  font-size: 14px;
+
+  line-height: 1.55;
+}
+
+/* Note */
+
+.food-chain-note {
+  max-width: 800px;
+
+  margin: 24px auto 0;
 
   text-align: center;
 
-  color: #687368;
+  color: #5c695e;
 
   font-size: 14px;
 
@@ -1393,15 +1694,31 @@ const currentFoodLevel = computed(() => {
   .food-level {
     width: 100%;
 
-    max-width: 320px;
+    max-width: 340px;
   }
 
   .chain-arrow {
     transform: rotate(90deg);
   }
 
-  .food-detail {
-    padding: 25px 20px;
+  .chain-arrow.active {
+    transform: rotate(90deg) scale(1.15);
+  }
+
+  .food-explorer {
+    grid-template-columns: 1fr;
+
+    padding: 22px 18px;
+  }
+
+  .food-overview {
+    padding-right: 0;
+
+    padding-bottom: 22px;
+
+    border-right: none;
+
+    border-bottom: 1px solid #e1e9df;
   }
 
   /* Modal */
