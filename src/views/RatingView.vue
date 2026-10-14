@@ -221,6 +221,21 @@ const averageRating = computed(() => {
   return (total / ratings.value.length).toFixed(1)
 })
 
+const ratingDistribution = computed(() => {
+  const total = ratings.value.length
+
+  return [5, 4, 3, 2, 1].map((score) => {
+    const count = ratings.value.filter((rating) => Number(rating.score) === score).length
+
+    const percentage = total === 0 ? 0 : Math.round((count / total) * 100)
+
+    return {
+      score,
+      count,
+      percentage,
+    }
+  })
+})
 /* =========================
    Authentication + Load
 ========================= */
@@ -276,6 +291,46 @@ onMounted(() => {
         </p>
       </section>
 
+      <section class="rating-distribution" aria-labelledby="rating-distribution-heading">
+        <div class="distribution-header">
+          <div>
+            <p class="distribution-tag">COMMUNITY INSIGHTS</p>
+
+            <h2 id="rating-distribution-heading">Rating Distribution</h2>
+          </div>
+
+          <p>See how the community rated their experience.</p>
+        </div>
+
+        <div class="distribution-list">
+          <div v-for="item in ratingDistribution" :key="item.score" class="distribution-row">
+            <div class="distribution-score" :aria-label="`${item.score} stars`">
+              <strong>
+                {{ item.score }}
+              </strong>
+
+              <span aria-hidden="true"> ★ </span>
+            </div>
+
+            <div class="distribution-track">
+              <div
+                class="distribution-fill"
+                :style="{
+                  width: `${item.percentage}%`,
+                }"
+              ></div>
+            </div>
+
+            <div class="distribution-value">
+              <span>
+                {{ item.count }}
+              </span>
+
+              <strong> {{ item.percentage }}% </strong>
+            </div>
+          </div>
+        </div>
+      </section>
       <!-- =========================
            Loading
       ========================== -->
@@ -539,6 +594,135 @@ onMounted(() => {
   color: #4d4d4d;
 }
 
+/* =========================
+   Rating Distribution
+========================= */
+
+.rating-distribution {
+  margin-bottom: 35px;
+
+  padding: 30px;
+
+  background: white;
+
+  border: 1px solid #dce6d9;
+
+  border-radius: 18px;
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+.distribution-header {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: end;
+
+  gap: 25px;
+
+  margin-bottom: 26px;
+}
+
+.distribution-tag {
+  margin: 0 0 5px;
+
+  color: #6d9564;
+
+  font-size: 11px;
+
+  font-weight: 800;
+
+  letter-spacing: 2px;
+}
+
+.distribution-header h2 {
+  margin: 0;
+
+  color: #2f6b3b;
+
+  font-size: 26px;
+}
+
+.distribution-header > p {
+  max-width: 320px;
+
+  margin: 0;
+
+  color: #595959;
+
+  text-align: right;
+
+  line-height: 1.6;
+}
+
+.distribution-list {
+  display: grid;
+
+  gap: 14px;
+}
+
+.distribution-row {
+  display: grid;
+
+  grid-template-columns:
+    70px
+    minmax(0, 1fr)
+    95px;
+
+  gap: 15px;
+
+  align-items: center;
+}
+
+.distribution-score {
+  display: flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  color: #2f6b3b;
+}
+
+.distribution-score span {
+  color: #b97800;
+}
+
+.distribution-track {
+  height: 12px;
+
+  overflow: hidden;
+
+  background: #edf1eb;
+
+  border-radius: 999px;
+}
+
+.distribution-fill {
+  height: 100%;
+
+  background: #6f9d64;
+
+  border-radius: inherit;
+
+  transition: width 0.35s ease;
+}
+
+.distribution-value {
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 8px;
+
+  color: #595959;
+
+  font-size: 14px;
+}
+
+.distribution-value strong {
+  color: #2f6b3b;
+}
 /* =========================
    Loading
 ========================= */
@@ -935,6 +1119,25 @@ onMounted(() => {
 
   .reviews-grid {
     grid-template-columns: 1fr;
+  }
+
+  .distribution-header {
+    flex-direction: column;
+
+    align-items: flex-start;
+  }
+
+  .distribution-header > p {
+    text-align: left;
+  }
+
+  .distribution-row {
+    grid-template-columns:
+      55px
+      minmax(0, 1fr)
+      75px;
+
+    gap: 10px;
   }
 }
 </style>

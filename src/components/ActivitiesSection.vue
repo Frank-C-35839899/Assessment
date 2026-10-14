@@ -14,52 +14,123 @@
     </div>
 
     <div class="activity-list">
+      <!-- Tree Planting -->
       <div class="activity-card">
         <h3>Community Tree Planting</h3>
 
-        <p class="activity-info"><strong>Date:</strong> 12 September 2026</p>
+        <p class="activity-info">
+          <strong>Date:</strong>
+          24 October 2026
+        </p>
 
-        <p class="activity-info"><strong>Location:</strong> Melbourne Community Park</p>
+        <p class="activity-info">
+          <strong>Location:</strong>
+          Melbourne Community Park
+        </p>
 
         <p>
           Join local residents to plant native trees and help improve Melbourne's urban environment.
         </p>
 
-        <router-link to="/activities/tree-planting" class="activity-button">
-          Learn More
-        </router-link>
+        <div class="activity-actions">
+          <router-link to="/activities/tree-planting" class="activity-button secondary">
+            Learn More
+          </router-link>
+
+          <router-link
+            :to="{
+              path: '/volunteer-registration',
+              query: {
+                activity: 'Community Tree Planting',
+                date: '24 October 2026',
+                location: 'Melbourne Community Park',
+              },
+            }"
+            class="activity-button"
+          >
+            Join Activity
+          </router-link>
+        </div>
       </div>
 
+      <!-- Garden Day -->
       <div class="activity-card">
         <h3>Community Garden Day</h3>
 
-        <p class="activity-info"><strong>Date:</strong> 20 September 2026</p>
+        <p class="activity-info">
+          <strong>Date:</strong>
+          31 October 2026
+        </p>
 
-        <p class="activity-info"><strong>Location:</strong> Local Community Garden</p>
+        <p class="activity-info">
+          <strong>Location:</strong>
+          Local Community Garden
+        </p>
 
         <p>
           Work together with community members to maintain shared green spaces and community
           gardens.
         </p>
 
-        <router-link to="/activities/garden-day" class="activity-button"> Learn More </router-link>
+        <div class="activity-actions">
+          <router-link to="/activities/garden-day" class="activity-button secondary">
+            Learn More
+          </router-link>
+
+          <router-link
+            :to="{
+              path: '/volunteer-registration',
+              query: {
+                activity: 'Community Garden Day',
+                date: '31 October 2026',
+                location: 'Local Community Garden',
+              },
+            }"
+            class="activity-button"
+          >
+            Join Activity
+          </router-link>
+        </div>
       </div>
 
+      <!-- Biodiversity Walk -->
       <div class="activity-card">
         <h3>Biodiversity Walk</h3>
 
-        <p class="activity-info"><strong>Date:</strong> 27 September 2026</p>
+        <p class="activity-info">
+          <strong>Date:</strong>
+          7 November 2026
+        </p>
 
-        <p class="activity-info"><strong>Location:</strong> Melbourne Nature Reserve</p>
+        <p class="activity-info">
+          <strong>Location:</strong>
+          Melbourne Nature Reserve
+        </p>
 
         <p>
           Discover local plants and wildlife while learning about biodiversity in Melbourne's urban
           environment.
         </p>
 
-        <router-link to="/activities/biodiversity-walk" class="activity-button">
-          Learn More
-        </router-link>
+        <div class="activity-actions">
+          <router-link to="/activities/biodiversity-walk" class="activity-button secondary">
+            Learn More
+          </router-link>
+
+          <router-link
+            :to="{
+              path: '/volunteer-registration',
+              query: {
+                activity: 'Biodiversity Walk',
+                date: '7 November 2026',
+                location: 'Melbourne Nature Reserve',
+              },
+            }"
+            class="activity-button"
+          >
+            Join Activity
+          </router-link>
+        </div>
       </div>
     </div>
   </section>
@@ -179,6 +250,44 @@
 
 .activity-button:hover {
   opacity: 0.85;
+}
+
+.activity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.activity-actions .activity-button {
+  margin-top: 0;
+}
+
+.activity-button.secondary {
+  color: #2f6b3b;
+  background: #e5efe3;
+  border: 1px solid #9bbd94;
+}
+
+.activity-button.secondary:hover {
+  background: #d7e7d4;
+  opacity: 1;
+}
+
+.activity-button:focus-visible {
+  outline: 3px solid #2f6b3b;
+  outline-offset: 3px;
+}
+
+@media (max-width: 500px) {
+  .activity-actions {
+    flex-direction: column;
+  }
+
+  .activity-button {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 @media (max-width: 900px) {

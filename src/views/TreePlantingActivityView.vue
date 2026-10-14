@@ -20,7 +20,7 @@
 
           <div class="info-item">
             <span class="info-label">Date</span>
-            <span class="info-value">12 September 2026</span>
+            <span class="info-value">24 October 2026</span>
           </div>
 
           <div class="info-item">

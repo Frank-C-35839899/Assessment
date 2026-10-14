@@ -1,5 +1,10 @@
 <script setup>
 import { ref } from 'vue'
+import { useRoute } from 'vue-router'
+const route = useRoute()
+
+const selectedActivityDate = ref('')
+const selectedActivityLocation = ref('')
 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 
@@ -32,7 +37,15 @@ const submitted = ref(false)
 const submitError = ref('')
 
 const isSubmitting = ref(false)
+const activityFromQuery = route.query.activity
 
+if (activityFromQuery) {
+  formData.value.activity = String(activityFromQuery)
+
+  selectedActivityDate.value = String(route.query.date || '')
+
+  selectedActivityLocation.value = String(route.query.location || '')
+}
 /* =========================
    Validation
 ========================= */
@@ -135,6 +148,10 @@ const submitForm = async () => {
 
       activity: formData.value.activity,
 
+      activityDate: selectedActivityDate.value,
+
+      activityLocation: selectedActivityLocation.value,
+
       availability: formData.value.availability.trim().slice(0, 100),
 
       experience: formData.value.experience.trim().slice(0, 300),
@@ -214,6 +231,27 @@ const clearForm = () => {
       <h2 id="volunteer-form-heading" class="sr-only">Volunteer registration form</h2>
 
       <form class="registration-form" novalidate @submit.prevent="submitForm">
+        <div
+          v-if="formData.activity && selectedActivityDate"
+          class="selected-activity"
+          role="status"
+        >
+          <p class="selected-activity-tag">SELECTED ACTIVITY</p>
+
+          <h3>
+            {{ formData.activity }}
+          </h3>
+
+          <p>
+            <strong>Date:</strong>
+            {{ selectedActivityDate }}
+          </p>
+
+          <p>
+            <strong>Location:</strong>
+            {{ selectedActivityLocation }}
+          </p>
+        </div>
         <!-- =========================
              Name
         ========================== -->
@@ -669,7 +707,42 @@ const clearForm = () => {
 
   cursor: not-allowed;
 }
+.selected-activity {
+  margin-bottom: 28px;
+  padding: 20px;
 
+  background: #eef5ee;
+
+  border: 1px solid #cbdcc7;
+  border-left: 5px solid #2f6b3b;
+
+  border-radius: 10px;
+}
+
+.selected-activity-tag {
+  margin: 0 0 6px;
+
+  color: #5f8956;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  letter-spacing: 2px;
+}
+
+.selected-activity h3 {
+  margin: 0 0 12px;
+
+  color: #2f6b3b;
+
+  font-size: 21px;
+}
+
+.selected-activity p {
+  margin: 5px 0;
+
+  color: #465448;
+}
 /* =========================
    Success
 ========================= */
